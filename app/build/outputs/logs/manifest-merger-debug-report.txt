@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-65:12
-INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-65:12
-INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-65:12
-INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-65:12
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-67:12
+INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-67:12
+INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-67:12
+INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:2:1-67:12
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\22\.gradle\caches\8.12\transforms\bdcca9394d328478ec610be20eabafcb\transformed\material-1.12.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.appcompat:appcompat-resources:1.7.0] C:\Users\22\.gradle\caches\8.12\transforms\8998a1a8efacd779d2ed668d43398031\transformed\jetified-appcompat-resources-1.7.0\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\22\.gradle\caches\8.12\transforms\46f1832f82e395c6ad4bdfd0b958fd8c\transformed\constraintlayout-2.0.1\AndroidManifest.xml:2:1-11:12
@@ -58,8 +58,8 @@ ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest
 	android:name
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:5:22-64
 application
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:5-63:19
-INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:5-63:19
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:5-65:19
+INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:5-65:19
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\22\.gradle\caches\8.12\transforms\bdcca9394d328478ec610be20eabafcb\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\22\.gradle\caches\8.12\transforms\bdcca9394d328478ec610be20eabafcb\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\22\.gradle\caches\8.12\transforms\46f1832f82e395c6ad4bdfd0b958fd8c\transformed\constraintlayout-2.0.1\AndroidManifest.xml:9:5-20
@@ -111,9 +111,9 @@ ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest
 	android:name
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:21:27-74
 activity#com.example.syncclipboard.ProgressActivity
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:25:9-27:40
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:25:9-27:39
 	android:exported
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:27:13-37
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:27:13-36
 	android:name
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:26:13-45
 activity#com.example.syncclipboard.ShareReceiveActivity
@@ -137,7 +137,9 @@ ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest
 	android:mimeType
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:35:23-52
 service#com.example.syncclipboard.UploadClipboardTileService
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:39:9-49:19
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:39:9-50:19
+	android:label
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:13-54
 	android:exported
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:42:13-36
 	android:permission
@@ -145,25 +147,27 @@ ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest
 	android:name
 		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:13-55
 intent-filter#action:name:android.service.quicksettings.action.QS_TILE
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:13-45:29
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:13-46:29
 action#android.service.quicksettings.action.QS_TILE
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:17-87
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:45:17-87
 	android:name
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:25-84
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:45:25-84
 meta-data#android.service.quicksettings.TITLE
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:46:13-48:61
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:47:13-49:61
 	android:value
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:48:17-58
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:49:17-58
 	android:name
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:47:17-67
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:48:17-67
 service#com.example.syncclipboard.DownloadClipboardTileService
-ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:51:9-61:19
+ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:52:9-63:19
+	android:label
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:56:13-56
 	android:exported
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:54:13-36
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:55:13-36
 	android:permission
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:53:13-77
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:54:13-77
 	android:name
-		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:52:13-57
+		ADDED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:53:13-57
 uses-sdk
 INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml
