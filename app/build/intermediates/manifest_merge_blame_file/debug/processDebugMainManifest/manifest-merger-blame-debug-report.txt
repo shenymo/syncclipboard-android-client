@@ -8,191 +8,198 @@
 8        android:minSdkVersion="31"
 9        android:targetSdkVersion="35" />
 10
-11    <permission
-11-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
-12        android:name="com.example.syncclipboard.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-12-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
-13        android:protectionLevel="signature" />
-13-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
-14
-15    <uses-permission android:name="com.example.syncclipboard.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-15-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
-15-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
-16
-17    <application
-17-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:4:5-59:19
-18        android:allowBackup="true"
-18-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:5:9-35
-19        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-19-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
-20        android:debuggable="true"
-21        android:extractNativeLibs="false"
-22        android:icon="@drawable/ic_launcher"
-22-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:6:9-45
-23        android:label="@string/app_name"
-23-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:9-41
-24        android:roundIcon="@drawable/ic_launcher"
-24-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:8:9-50
-25        android:supportsRtl="true"
-25-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:9:9-35
-26        android:testOnly="true"
-27        android:theme="@style/Theme.SyncClipboard" >
-27-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:10:9-51
-28        <activity
-28-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:12:9-19:20
-29            android:name="com.example.syncclipboard.SettingsActivity"
-29-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:13:13-45
-30            android:exported="true" >
-30-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:14:13-36
-31            <intent-filter>
-31-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:15:13-18:29
-32                <action android:name="android.intent.action.MAIN" />
-32-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:16:17-69
-32-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:16:25-66
-33
-34                <category android:name="android.intent.category.LAUNCHER" />
-34-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:17:17-77
-34-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:17:27-74
-35            </intent-filter>
-36        </activity>
-37        <activity
-37-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:21:9-23:40
-38            android:name="com.example.syncclipboard.ProgressActivity"
-38-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:22:13-45
-39            android:exported="false" />
-39-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:23:13-37
-40        <activity
-40-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:25:9-33:20
-41            android:name="com.example.syncclipboard.ShareReceiveActivity"
-41-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:26:13-49
-42            android:exported="true" >
-42-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:27:13-36
-43            <intent-filter>
-43-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:28:13-32:29
-44                <action android:name="android.intent.action.SEND" />
-44-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:29:17-69
-44-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:29:25-66
-45
-46                <category android:name="android.intent.category.DEFAULT" />
-46-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:30:17-76
-46-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:30:27-73
-47
-48                <data android:mimeType="text/plain" />
-48-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:31:17-55
-48-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:31:23-52
-49            </intent-filter>
-50        </activity>
+11    <!-- 访问 SyncClipboard 服务器需要网络权限 -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:5:5-67
+12-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:5:22-64
+13
+14    <permission
+14-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+15        android:name="com.example.syncclipboard.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+15-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+16        android:protectionLevel="signature" />
+16-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+17
+18    <uses-permission android:name="com.example.syncclipboard.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+18-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+18-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+19
+20    <application
+20-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:7:5-63:19
+21        android:allowBackup="true"
+21-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:8:9-35
+22        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+22-->[androidx.core:core:1.13.1] C:\Users\22\.gradle\caches\8.12\transforms\ed897e244c0302bcb4c9e59f0e48e172\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+23        android:debuggable="true"
+24        android:extractNativeLibs="false"
+25        android:icon="@drawable/ic_launcher"
+25-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:9:9-45
+26        android:label="@string/app_name"
+26-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:10:9-41
+27        android:roundIcon="@drawable/ic_launcher"
+27-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:11:9-50
+28        android:supportsRtl="true"
+28-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:12:9-35
+29        android:testOnly="true"
+30        android:theme="@style/Theme.SyncClipboard"
+30-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:13:9-51
+31        android:usesCleartextTraffic="true" >
+31-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:14:9-44
+32        <activity
+32-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:16:9-23:20
+33            android:name="com.example.syncclipboard.SettingsActivity"
+33-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:17:13-45
+34            android:exported="true" >
+34-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:18:13-36
+35            <intent-filter>
+35-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:19:13-22:29
+36                <action android:name="android.intent.action.MAIN" />
+36-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:20:17-69
+36-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:20:25-66
+37
+38                <category android:name="android.intent.category.LAUNCHER" />
+38-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:21:17-77
+38-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:21:27-74
+39            </intent-filter>
+40        </activity>
+41        <activity
+41-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:25:9-27:40
+42            android:name="com.example.syncclipboard.ProgressActivity"
+42-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:26:13-45
+43            android:exported="false" />
+43-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:27:13-37
+44        <activity
+44-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:29:9-37:20
+45            android:name="com.example.syncclipboard.ShareReceiveActivity"
+45-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:30:13-49
+46            android:exported="true" >
+46-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:31:13-36
+47            <intent-filter>
+47-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:32:13-36:29
+48                <action android:name="android.intent.action.SEND" />
+48-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:33:17-69
+48-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:33:25-66
+49
+50                <category android:name="android.intent.category.DEFAULT" />
+50-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:34:17-76
+50-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:34:27-73
 51
-52        <service
-52-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:35:9-45:19
-53            android:name="com.example.syncclipboard.UploadClipboardTileService"
-53-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:36:13-55
-54            android:exported="true"
-54-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:38:13-36
-55            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" >
-55-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:37:13-77
-56            <intent-filter>
-56-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:39:13-41:29
-57                <action android:name="android.service.quicksettings.action.QS_TILE" />
-57-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:17-87
-57-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:25-84
-58            </intent-filter>
-59
-60            <meta-data
-60-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:42:13-44:61
-61                android:name="android.service.quicksettings.TITLE"
-61-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:17-67
-62                android:value="@string/tile_upload_title" />
-62-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:17-58
-63        </service>
-64        <service
-64-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:47:9-57:19
-65            android:name="com.example.syncclipboard.DownloadClipboardTileService"
-65-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:48:13-57
-66            android:exported="true"
-66-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:50:13-36
-67            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" >
-67-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:49:13-77
-68            <intent-filter>
-68-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:39:13-41:29
-69                <action android:name="android.service.quicksettings.action.QS_TILE" />
-69-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:17-87
-69-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:25-84
-70            </intent-filter>
-71
-72            <meta-data
-72-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:42:13-44:61
-73                android:name="android.service.quicksettings.TITLE"
-73-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:17-67
-74                android:value="@string/tile_download_title" />
-74-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:17-58
-75        </service>
-76
-77        <provider
-77-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-78            android:name="androidx.startup.InitializationProvider"
-78-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:25:13-67
-79            android:authorities="com.example.syncclipboard.androidx-startup"
-79-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:26:13-68
-80            android:exported="false" >
-80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:27:13-37
-81            <meta-data
-81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-82                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:30:17-75
-83                android:value="androidx.startup" />
-83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:31:17-49
-84            <meta-data
-84-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
-85                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-85-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
-86                android:value="androidx.startup" />
-86-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
-87            <meta-data
-87-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-88                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-88-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-89                android:value="androidx.startup" />
-89-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-90        </provider>
-91
-92        <receiver
-92-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-93            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-93-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-94            android:directBootAware="false"
-94-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-95            android:enabled="true"
-95-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-96            android:exported="true"
-96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-97            android:permission="android.permission.DUMP" >
-97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-98            <intent-filter>
-98-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-99                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-100            </intent-filter>
-101            <intent-filter>
-101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-102                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
-103            </intent-filter>
-104            <intent-filter>
-104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-105                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
-106            </intent-filter>
-107            <intent-filter>
-107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-108                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
-109            </intent-filter>
-110        </receiver>
-111    </application>
-112
-113</manifest>
+52                <data android:mimeType="text/plain" />
+52-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:35:17-55
+52-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:35:23-52
+53            </intent-filter>
+54        </activity>
+55
+56        <service
+56-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:39:9-49:19
+57            android:name="com.example.syncclipboard.UploadClipboardTileService"
+57-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:40:13-55
+58            android:exported="true"
+58-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:42:13-36
+59            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" >
+59-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:41:13-77
+60            <intent-filter>
+60-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:13-45:29
+61                <action android:name="android.service.quicksettings.action.QS_TILE" />
+61-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:17-87
+61-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:25-84
+62            </intent-filter>
+63
+64            <meta-data
+64-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:46:13-48:61
+65                android:name="android.service.quicksettings.TITLE"
+65-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:47:17-67
+66                android:value="@string/tile_upload_title" />
+66-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:48:17-58
+67        </service>
+68        <service
+68-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:51:9-61:19
+69            android:name="com.example.syncclipboard.DownloadClipboardTileService"
+69-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:52:13-57
+70            android:exported="true"
+70-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:54:13-36
+71            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" >
+71-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:53:13-77
+72            <intent-filter>
+72-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:43:13-45:29
+73                <action android:name="android.service.quicksettings.action.QS_TILE" />
+73-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:17-87
+73-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:44:25-84
+74            </intent-filter>
+75
+76            <meta-data
+76-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:46:13-48:61
+77                android:name="android.service.quicksettings.TITLE"
+77-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:47:17-67
+78                android:value="@string/tile_download_title" />
+78-->D:\Download\syncclipboard-android-client\app\src\main\AndroidManifest.xml:48:17-58
+79        </service>
+80
+81        <provider
+81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+82            android:name="androidx.startup.InitializationProvider"
+82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:25:13-67
+83            android:authorities="com.example.syncclipboard.androidx-startup"
+83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:26:13-68
+84            android:exported="false" >
+84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:27:13-37
+85            <meta-data
+85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+86                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:30:17-75
+87                android:value="androidx.startup" />
+87-->[androidx.emoji2:emoji2:1.3.0] C:\Users\22\.gradle\caches\8.12\transforms\62ba2af535349d945c17e17fe6f88a88\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:31:17-49
+88            <meta-data
+88-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+89                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+89-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+90                android:value="androidx.startup" />
+90-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\22\.gradle\caches\8.12\transforms\e73fbac69b9c1846b3f72b0d86fdf6d1\transformed\jetified-lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+91            <meta-data
+91-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+92                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+92-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+93                android:value="androidx.startup" />
+93-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+94        </provider>
+95
+96        <receiver
+96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+97            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+98            android:directBootAware="false"
+98-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+99            android:enabled="true"
+99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+100            android:exported="true"
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+101            android:permission="android.permission.DUMP" >
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+102            <intent-filter>
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+103                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+104            </intent-filter>
+105            <intent-filter>
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+106                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+107            </intent-filter>
+108            <intent-filter>
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+109                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+110            </intent-filter>
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+112                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\22\.gradle\caches\8.12\transforms\b45973ab5ecc275aa48d4884a5e9dcc5\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+113            </intent-filter>
+114        </receiver>
+115    </application>
+116
+117</manifest>
