@@ -1,14 +1,18 @@
 [
     {
-        "merged": "com.example.syncclipboard.app-debug-31:/drawable_ic_launcher.xml.flat",
-        "source": "com.example.syncclipboard.app-main-33:/drawable/ic_launcher.xml"
+        "merged": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-debug-31:\\layout_activity_progress.xml.flat",
+        "source": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-main-33:\\layout\\activity_progress.xml"
+    },
+    {
+        "merged": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-debug-31:\\layout_activity_settings.xml.flat",
+        "source": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-main-33:\\layout\\activity_settings.xml"
     },
     {
         "merged": "com.example.syncclipboard.app-debug-31:/layout_activity_progress.xml.flat",
         "source": "com.example.syncclipboard.app-main-33:/layout/activity_progress.xml"
     },
     {
-        "merged": "com.example.syncclipboard.app-debug-31:/layout_activity_settings.xml.flat",
-        "source": "com.example.syncclipboard.app-main-33:/layout/activity_settings.xml"
+        "merged": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-debug-31:\\drawable_ic_launcher.xml.flat",
+        "source": "C:\\Users\\22\\.gradle\\daemon\\8.12\\com.example.syncclipboard.app-main-33:\\drawable\\ic_launcher.xml"
     }
 ]

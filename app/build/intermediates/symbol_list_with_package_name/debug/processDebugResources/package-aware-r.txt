@@ -3097,6 +3097,7 @@ id beginning
 id blocking
 id bottom
 id bounce
+id buttonAction
 id buttonPanel
 id buttonSave
 id buttonTest
@@ -3701,6 +3702,7 @@ string bottomsheet_action_expand_halfway
 string bottomsheet_drag_handle_clicked
 string bottomsheet_drag_handle_content_description
 string button_save
+string button_start
 string button_test_connection
 string call_notification_answer_action
 string call_notification_answer_video_action

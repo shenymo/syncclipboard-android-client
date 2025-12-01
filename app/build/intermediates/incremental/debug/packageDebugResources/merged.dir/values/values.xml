@@ -5,6 +5,7 @@
     <color name="teal_200">#03DAC5</color>
     <string name="app_name">SyncClipboard Client</string>
     <string name="button_save">保存</string>
+    <string name="button_start">开始</string>
     <string name="button_test_connection">测试连接</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>

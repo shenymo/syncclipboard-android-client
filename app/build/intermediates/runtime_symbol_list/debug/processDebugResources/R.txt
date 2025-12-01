@@ -3096,6 +3096,7 @@ int id beginning 0x7f080054
 int id blocking 0x7f080055
 int id bottom 0x7f080056
 int id bounce 0x7f080057
+int id buttonAction 0x7f0801cb
 int id buttonPanel 0x7f080058
 int id buttonSave 0x7f080059
 int id buttonTest 0x7f08005a
@@ -3700,6 +3701,7 @@ int string bottomsheet_action_expand_halfway 0x7f0e0021
 int string bottomsheet_drag_handle_clicked 0x7f0e0022
 int string bottomsheet_drag_handle_content_description 0x7f0e0023
 int string button_save 0x7f0e0024
+int string button_start 0x7f0e00b8
 int string button_test_connection 0x7f0e0025
 int string call_notification_answer_action 0x7f0e0026
 int string call_notification_answer_video_action 0x7f0e0027
