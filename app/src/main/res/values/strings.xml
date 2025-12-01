@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SyncClipboard Client</string>
+
+    <string name="settings_title">SyncClipboard 设置</string>
+    <string name="label_base_url">服务器地址 (Base URL)</string>
+    <string name="label_username">用户名</string>
+    <string name="label_token">Token</string>
+    <string name="button_save">保存</string>
+    <string name="button_test_connection">测试连接</string>
+
+    <string name="tile_upload_title">上传剪贴板</string>
+    <string name="tile_download_title">下载剪贴板</string>
+
+    <string name="progress_upload_clipboard">正在上传剪贴板…</string>
+    <string name="progress_download_clipboard">正在下载剪贴板…</string>
+    <string name="progress_upload_shared">正在上传分享内容…</string>
+    <string name="progress_test_connection">正在测试连接…</string>
+
+    <string name="result_success">成功</string>
+    <string name="result_failed">失败：%1$s</string>
+
+    <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
+    <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
+    <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>
+</resources>
+
