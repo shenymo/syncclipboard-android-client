@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.view.View
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +25,7 @@ class ProgressActivity : AppCompatActivity() {
         setContentView(R.layout.activity_progress)
 
         val textStatus = findViewById<TextView>(R.id.textStatus)
+        val buttonAction = findViewById<Button>(R.id.buttonAction)
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
 
         textStatus.text = when (operation) {
@@ -33,14 +36,31 @@ class ProgressActivity : AppCompatActivity() {
             else -> getString(R.string.progress_upload_clipboard)
         }
 
-        lifecycleScope.launch {
-            val message = withContext(Dispatchers.IO) {
-                performOperation(operation)
+        if (operation == OP_UPLOAD_CLIPBOARD) {
+            // 从磁贴上传剪贴板时，为了满足系统“前台 + 用户交互”要求，
+            // 等用户点击按钮后再访问剪贴板。
+            buttonAction.visibility = View.VISIBLE
+            buttonAction.setOnClickListener {
+                buttonAction.isEnabled = false
+                lifecycleScope.launch {
+                    val message = withContext(Dispatchers.IO) {
+                        performOperation(operation)
+                    }
+                    textStatus.text = message
+                    delay(1500)
+                    finish()
+                }
             }
-
-            textStatus.text = message
-            delay(1500)
-            finish()
+        } else {
+            buttonAction.visibility = View.GONE
+            lifecycleScope.launch {
+                val message = withContext(Dispatchers.IO) {
+                    performOperation(operation)
+                }
+                textStatus.text = message
+                delay(1500)
+                finish()
+            }
         }
     }
 
@@ -122,4 +142,3 @@ class ProgressActivity : AppCompatActivity() {
         const val OP_TEST_CONNECTION = "test_connection"
     }
 }
-
