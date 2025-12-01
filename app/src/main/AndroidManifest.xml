@@ -24,7 +24,7 @@
 
         <activity
             android:name=".ProgressActivity"
-            android:exported="false" />
+            android:exported="true" />
 
         <activity
             android:name=".ShareReceiveActivity"
@@ -39,7 +39,8 @@
         <service
             android:name=".UploadClipboardTileService"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/tile_upload_title">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
@@ -51,7 +52,8 @@
         <service
             android:name=".DownloadClipboardTileService"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/tile_download_title">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
