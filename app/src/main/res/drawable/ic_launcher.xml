@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 非常简单的占位图标：一个纯色圆形 -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M54,4
+                          A50,50 0 1,1 53.9,4" />
+
+</vector>
+
