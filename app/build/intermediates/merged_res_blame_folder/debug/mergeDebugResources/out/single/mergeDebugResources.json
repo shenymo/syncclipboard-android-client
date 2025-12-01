@@ -1,5 +1,9 @@
 [
     {
+        "merged": "com.example.syncclipboard.app-debug-31:/drawable_ic_launcher.xml.flat",
+        "source": "com.example.syncclipboard.app-main-33:/drawable/ic_launcher.xml"
+    },
+    {
         "merged": "com.example.syncclipboard.app-debug-31:/layout_activity_progress.xml.flat",
         "source": "com.example.syncclipboard.app-main-33:/layout/activity_progress.xml"
     },
