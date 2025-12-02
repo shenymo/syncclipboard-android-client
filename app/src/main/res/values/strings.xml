@@ -5,7 +5,7 @@
     <string name="settings_title">SyncClipboard 设置</string>
     <string name="label_base_url">服务器地址 (Base URL)</string>
     <string name="label_username">用户名</string>
-    <string name="label_token">Token</string>
+    <string name="label_token">密码</string>
     <string name="button_save">保存</string>
     <string name="button_test_connection">测试连接</string>
 
@@ -39,7 +39,7 @@
     <string name="error_file_create_failed">无法在 Download 目录创建文件。</string>
     <string name="error_file_download_failed">下载文件失败。</string>
 
-    <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
+    <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和密码。</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>
 

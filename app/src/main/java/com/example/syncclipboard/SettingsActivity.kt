@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * 简单设置界面：
- * - 填写服务器地址、用户名、Token
+ * - 填写服务器地址、用户名、密码
  * - 保存到 SharedPreferences
  * - “测试连接”按钮调用服务器 /SyncClipboard.json
  */

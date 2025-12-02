@@ -16,7 +16,7 @@ import java.net.URL
  * - GET /SyncClipboard.json 下载文本剪贴板
  *
  * 认证方式：
- *   header: authorization = "basic " + base64(username:token)
+ *   header: authorization = "basic " + base64(username:password)
  */
 object SyncClipboardApi {
 
