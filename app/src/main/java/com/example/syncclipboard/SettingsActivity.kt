@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import android.widget.RadioGroup
+import android.widget.RadioButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -27,12 +29,30 @@ class SettingsActivity : AppCompatActivity() {
         val editToken = findViewById<EditText>(R.id.editToken)
         val buttonSave = findViewById<Button>(R.id.buttonSave)
         val buttonTest = findViewById<Button>(R.id.buttonTest)
+        val radioGroupUiStyle = findViewById<RadioGroup>(R.id.radioGroupUiStyle)
+        val radioStyleDialog = findViewById<RadioButton>(R.id.radioStyleDialog)
+        val radioStyleBottomSheet = findViewById<RadioButton>(R.id.radioStyleBottomSheet)
 
         // 读取已有配置
         ConfigStorage.loadConfig(this)?.let { config ->
             editBaseUrl.setText(config.baseUrl)
             editUsername.setText(config.username)
             editToken.setText(config.token)
+        }
+
+        // 读取并应用当前进度界面样式设置
+        when (UiStyleStorage.loadProgressStyle(this)) {
+            UiStyleStorage.STYLE_BOTTOM_SHEET -> radioStyleBottomSheet.isChecked = true
+            else -> radioStyleDialog.isChecked = true
+        }
+
+        // 切换单选按钮时立即保存样式选择
+        radioGroupUiStyle.setOnCheckedChangeListener { _, checkedId ->
+            val style = when (checkedId) {
+                R.id.radioStyleBottomSheet -> UiStyleStorage.STYLE_BOTTOM_SHEET
+                else -> UiStyleStorage.STYLE_DIALOG
+            }
+            UiStyleStorage.saveProgressStyle(this, style)
         }
 
         buttonSave.setOnClickListener {
@@ -78,4 +98,3 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 }
-

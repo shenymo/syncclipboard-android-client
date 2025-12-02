@@ -42,4 +42,9 @@
     <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>
+
+    <!-- 设置界面：进度界面样式 -->
+    <string name="settings_ui_style_title">进度界面样式</string>
+    <string name="settings_ui_style_dialog">对话框样式</string>
+    <string name="settings_ui_style_bottom_sheet">底部弹出样式 (BottomSheet)</string>
 </resources>

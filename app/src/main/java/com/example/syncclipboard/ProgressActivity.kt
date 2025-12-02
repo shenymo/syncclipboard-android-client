@@ -15,6 +15,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,6 +28,8 @@ class ProgressActivity : AppCompatActivity() {
     private var started = false
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
     private var requireUserTap = false
+    private var useBottomSheet = false
+    private var bottomSheetDialog: BottomSheetDialog? = null
 
     private lateinit var textStatus: TextView
     private lateinit var textContent: TextView
@@ -45,17 +48,46 @@ class ProgressActivity : AppCompatActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 根据设置选择使用对话框样式还是 BottomSheet 样式
+        useBottomSheet = UiStyleStorage.loadProgressStyle(this) == UiStyleStorage.STYLE_BOTTOM_SHEET
+        if (useBottomSheet) {
+            // BottomSheet 使用普通主题，全屏承载，实际界面由 BottomSheetDialog 显示
+            setTheme(R.style.Theme_SyncClipboard)
+        } else {
+            // 对话框样式保持原有主题
+            setTheme(R.style.Theme_SyncClipboard_Dialog)
+        }
+
         super.onCreate(savedInstanceState)
 
-        // 使用对话框主题时，允许点击对话框外部区域自动关闭 Activity
-        setFinishOnTouchOutside(true)
-
-        setContentView(R.layout.activity_progress)
-
-        textStatus = findViewById(R.id.textStatus)
-        textContent = findViewById(R.id.textContent)
-        buttonAction = findViewById(R.id.buttonAction)
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
+
+        if (useBottomSheet) {
+            // 使用 BottomSheet 弹出样式
+            val dialog = BottomSheetDialog(this)
+            val view = layoutInflater.inflate(R.layout.activity_progress, null)
+            dialog.setContentView(view)
+
+            textStatus = view.findViewById(R.id.textStatus)
+            textContent = view.findViewById(R.id.textContent)
+            buttonAction = view.findViewById(R.id.buttonAction)
+
+            dialog.setOnDismissListener {
+                // 底部弹窗关闭时结束 Activity，行为类似对话框
+                finish()
+            }
+            dialog.show()
+            bottomSheetDialog = dialog
+        } else {
+            // 使用对话框主题时，允许点击对话框外部区域自动关闭 Activity
+            setFinishOnTouchOutside(true)
+
+            setContentView(R.layout.activity_progress)
+
+            textStatus = findViewById(R.id.textStatus)
+            textContent = findViewById(R.id.textContent)
+            buttonAction = findViewById(R.id.buttonAction)
+        }
 
         currentOperation = operation
 
@@ -104,6 +136,12 @@ class ProgressActivity : AppCompatActivity() {
             requireUserTap = false
             buttonAction.visibility = View.GONE
         }
+    }
+
+    override fun onDestroy() {
+        bottomSheetDialog?.dismiss()
+        bottomSheetDialog = null
+        super.onDestroy()
     }
 
     override fun onResume() {
