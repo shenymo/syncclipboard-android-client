@@ -67,6 +67,8 @@ class ProgressActivity : AppCompatActivity() {
             val dialog = BottomSheetDialog(this)
             // 底部弹出时不额外压暗下方界面
             dialog.window?.setDimAmount(0f)
+            // 仅在用户主动下拉（或按返回键）时关闭，避免误触屏幕导致弹窗消失
+            dialog.setCanceledOnTouchOutside(false)
             val view = layoutInflater.inflate(R.layout.activity_progress, null)
             dialog.setContentView(view)
 
@@ -527,13 +529,7 @@ class ProgressActivity : AppCompatActivity() {
                 content = null
             )
 
-            // 步骤 3：网络传输完成，正在保存到 Download 目录
-            runOnUiThread {
-                textStatus.text = "下载完成，正在保存到 Download…"
-                textContent.visibility = View.GONE
-            }
-
-            // 步骤 4：文件已成功保存，组成“文件名已下载到路径”的说明文字
+            // 步骤 3：文件已成功保存，组成“文件名已下载到路径”的说明文字
             val downloadDirPath = Environment
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 .absolutePath
