@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
 import android.widget.Button
@@ -123,10 +124,12 @@ class ProgressActivity : AppCompatActivity() {
                     performOperation(operation)
                 }
 
-                // 下载剪贴板：标题为“已写入剪贴板”或“写入剪贴板失败”
+                // 下载剪贴板 / 文件：根据结果显示“已写入剪贴板”或“文件已下载”等文案
                 if (operation == OP_DOWNLOAD_CLIPBOARD) {
                     if (result.success) {
-                        textStatus.text = getString(R.string.toast_download_success)
+                        // 对于文本：message = “已写入剪贴板”
+                        // 对于文件：message = “文件已下载”
+                        textStatus.text = result.message
                         if (!result.content.isNullOrEmpty()) {
                             textContent.visibility = View.VISIBLE
                             textContent.text = result.content
@@ -380,6 +383,8 @@ class ProgressActivity : AppCompatActivity() {
      */
     private fun downloadFileToDownloadDir(config: ServerConfig, fileName: String): OperationResult {
         return try {
+            val startTime = System.currentTimeMillis()
+
             val values = android.content.ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
                 put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
@@ -396,7 +401,25 @@ class ProgressActivity : AppCompatActivity() {
                 )
 
             contentResolver.openOutputStream(uri)?.use { out ->
-                val result = SyncClipboardApi.downloadFileToStream(config, fileName, out)
+                val result = SyncClipboardApi.downloadFileToStream(
+                    config,
+                    fileName,
+                    out
+                ) { downloaded, total ->
+                    // 下载进度回调：在 UI 线程上更新文案
+                    runOnUiThread {
+                        val elapsedMs = System.currentTimeMillis() - startTime
+                        val elapsedSec = if (elapsedMs <= 0) 1 else elapsedMs / 1000
+                        val speedBytesPerSec = if (elapsedSec <= 0) downloaded else downloaded / elapsedSec
+                        val progressText = buildFileDownloadProgressText(
+                            downloadedBytes = downloaded,
+                            totalBytes = total,
+                            speedBytesPerSec = speedBytesPerSec
+                        )
+                        textStatus.text = progressText
+                        textContent.visibility = View.GONE
+                    }
+                }
                 if (!result.success) {
                     return OperationResult(
                         success = false,
@@ -416,11 +439,16 @@ class ProgressActivity : AppCompatActivity() {
                 content = null
             )
 
-            // 使用简短提示：文件名
+            // 组成“文件名已下载到路径”的说明文字
+            val downloadDirPath = Environment
+                .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                .absolutePath
+            val contentText = "\"$fileName\" 已下载到 \"$downloadDirPath\""
+
             OperationResult(
                 success = true,
                 message = getString(R.string.toast_download_file_success),
-                content = fileName
+                content = contentText
             )
         } catch (e: Exception) {
             OperationResult(
@@ -432,6 +460,28 @@ class ProgressActivity : AppCompatActivity() {
                 content = null
             )
         }
+    }
+
+    /**
+     * 将字节数格式化为 B / KB / MB 文本，用于显示下载进度和速度。
+     */
+    private fun formatSize(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val kb = bytes / 1024.0
+        if (kb < 1024) return String.format("%.1f KB", kb)
+        val mb = kb / 1024.0
+        return String.format("%.1f MB", mb)
+    }
+
+    private fun buildFileDownloadProgressText(
+        downloadedBytes: Long,
+        totalBytes: Long,
+        speedBytesPerSec: Long
+    ): String {
+        val downloaded = formatSize(downloadedBytes)
+        val total = if (totalBytes > 0) formatSize(totalBytes) else "未知大小"
+        val speed = formatSize(speedBytesPerSec) + "/s"
+        return "正在下载文件… $downloaded / $total ($speed)"
     }
 
     private fun testConnection(config: ServerConfig): OperationResult {

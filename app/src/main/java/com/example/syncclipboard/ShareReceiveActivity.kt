@@ -38,6 +38,8 @@ class ShareReceiveActivity : AppCompatActivity() {
         val progressIntent = Intent(this, ProgressActivity::class.java).apply {
             putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
             putExtra(ProgressActivity.EXTRA_SHARED_TEXT, sharedText)
+            // 在独立任务中显示对话框，避免唤起设置主界面
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(progressIntent)
     }
@@ -50,6 +52,8 @@ class ShareReceiveActivity : AppCompatActivity() {
             putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_FILE)
             putExtra(ProgressActivity.EXTRA_FILE_URI, uri.toString())
             putExtra(ProgressActivity.EXTRA_FILE_NAME, fileName)
+            // 在独立任务中显示对话框，避免唤起设置主界面
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(progressIntent)
     }

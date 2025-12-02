@@ -214,9 +214,15 @@ object SyncClipboardApi {
 
     /**
      * 下载服务器上指定文件名的内容到给定输出流。
+     * onProgress 回调用于报告下载进度（已下载字节数 / 总字节数），totalBytes 可能为 -1 表示未知。
      * 具体保存位置由调用方决定。
      */
-    fun downloadFileToStream(config: ServerConfig, fileName: String, out: OutputStream): ApiResult<Unit> {
+    fun downloadFileToStream(
+        config: ServerConfig,
+        fileName: String,
+        out: OutputStream,
+        onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
+    ): ApiResult<Unit> {
         return try {
             val baseUrl = config.baseUrl.trimEnd('/')
             val fileUrl = URL("$baseUrl/file/$fileName")
@@ -233,9 +239,20 @@ object SyncClipboardApi {
                 return ApiResult(success = false, errorMessage = message)
             }
 
+            val total = conn.contentLengthLong
+            var downloaded = 0L
+
             conn.inputStream.use { input ->
-                copyStream(input, out)
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count <= 0) break
+                    out.write(buffer, 0, count)
+                    downloaded += count
+                    onProgress?.invoke(downloaded, total)
+                }
             }
+
             ApiResult(success = true)
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
@@ -260,6 +277,7 @@ object SyncClipboardApi {
         }
     }
 
+    // 复制流的通用工具目前只用于无进度场景，保留以备后续使用。
     private fun copyStream(input: InputStream, output: OutputStream) {
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         while (true) {
