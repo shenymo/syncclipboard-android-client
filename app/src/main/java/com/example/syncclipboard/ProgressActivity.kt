@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
+import android.view.Gravity
 import android.widget.Button
 import android.widget.Toast
 import android.widget.TextView
@@ -200,11 +201,16 @@ class ProgressActivity : AppCompatActivity() {
                     }
                 }
 
-                Toast.makeText(
+                val toast = Toast.makeText(
                     this@ProgressActivity,
                     result.message,
                     Toast.LENGTH_SHORT
-                ).show()
+                )
+                // BottomSheet 模式下，避免 Toast 挡住底部内容，改为在顶部居中显示
+                if (useBottomSheet) {
+                    toast.setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 100)
+                }
+                toast.show()
             }
         }
     }
