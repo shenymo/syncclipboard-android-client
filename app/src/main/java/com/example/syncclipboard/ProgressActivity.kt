@@ -22,6 +22,7 @@ class ProgressActivity : AppCompatActivity() {
     // 记录当前要执行的操作类型，以及是否已经启动过，避免同一个实例多次执行。
     private var started = false
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
+    private var requireUserTap = false
 
     /**
      * 简单封装一次操作的结果：
@@ -49,16 +50,44 @@ class ProgressActivity : AppCompatActivity() {
             else -> getString(R.string.progress_upload_clipboard)
         }
 
-        // 统一采用对话框样式的小窗口，只显示状态文字，不需要用户点击
-        buttonAction.visibility = View.GONE
-
-        // 真正启动上传/下载逻辑的时机放在 onResume 里，
-        // 避免在 Activity 尚未获得焦点时访问剪贴板被系统拒绝。
         currentOperation = operation
+
+        if (operation == OP_UPLOAD_CLIPBOARD) {
+            // 上传本机剪贴板必须由用户在本应用内点击触发，
+            // 否则 Android 会认为是后台读剪贴板而拒绝访问。
+            requireUserTap = true
+            buttonAction.visibility = View.VISIBLE
+            buttonAction.text = getString(R.string.button_start)
+            buttonAction.setOnClickListener {
+                if (started) return@setOnClickListener
+                started = true
+
+                lifecycleScope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        performOperation(OP_UPLOAD_CLIPBOARD)
+                    }
+                    Toast.makeText(
+                        this@ProgressActivity,
+                        result.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finishAffinity()
+                }
+            }
+        } else {
+            // 下载剪贴板 / 分享上传 / 测试连接 不需要访问本机剪贴板，
+            // 可以在 onResume 中自动执行。
+            requireUserTap = false
+            buttonAction.visibility = View.GONE
+        }
     }
 
     override fun onResume() {
         super.onResume()
+
+        // 对于上传剪贴板的场景，必须等用户点击按钮才执行，
+        // 避免在应用未获得聚焦或无用户手势时访问剪贴板被系统拒绝。
+        if (requireUserTap) return
 
         // 只在第一次恢复时启动一次操作，避免因重建/旋转等重复执行
         if (started) return
