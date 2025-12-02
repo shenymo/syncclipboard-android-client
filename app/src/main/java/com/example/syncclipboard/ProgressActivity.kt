@@ -3,7 +3,9 @@ package com.example.syncclipboard
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
@@ -91,6 +93,7 @@ class ProgressActivity : AppCompatActivity() {
             textStatus.text = when (operation) {
                 OP_DOWNLOAD_CLIPBOARD -> getString(R.string.progress_download_clipboard)
                 OP_UPLOAD_SHARED_TEXT -> getString(R.string.progress_upload_shared)
+                OP_UPLOAD_FILE -> getString(R.string.progress_upload_file)
                 OP_TEST_CONNECTION -> getString(R.string.progress_test_connection)
                 else -> getString(R.string.progress_upload_clipboard)
             }
@@ -175,6 +178,7 @@ class ProgressActivity : AppCompatActivity() {
             OP_UPLOAD_CLIPBOARD -> uploadClipboard(config)
             OP_DOWNLOAD_CLIPBOARD -> downloadClipboard(config)
             OP_UPLOAD_SHARED_TEXT -> uploadSharedText(config)
+            OP_UPLOAD_FILE -> uploadSharedFile(config)
             OP_TEST_CONNECTION -> testConnection(config)
             else -> OperationResult(
                 success = false,
@@ -226,23 +230,63 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun downloadClipboard(config: ServerConfig): OperationResult {
-        val result = SyncClipboardApi.downloadText(config)
-        return if (result.success && result.data != null) {
-            val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("SyncClipboard", result.data)
-            clipboardManager.setPrimaryClip(clip)
-            OperationResult(
-                success = true,
-                message = getString(R.string.toast_download_success),
-                content = result.data
-            )
-        } else {
-            val message = result.errorMessage ?: getString(R.string.error_server_not_text)
-            OperationResult(
+        // 先获取完整 Profile，根据 Type 决定是文本还是文件
+        val profileResult = SyncClipboardApi.getClipboardProfile(config)
+        if (!profileResult.success || profileResult.data == null) {
+            return OperationResult(
                 success = false,
-                message = getString(R.string.toast_error_prefix, message),
+                message = getString(
+                    R.string.toast_error_prefix,
+                    profileResult.errorMessage ?: getString(R.string.error_server_not_text)
+                ),
                 content = null
             )
+        }
+
+        val profile = profileResult.data
+        return when (profile.type) {
+            "Text" -> {
+                val text = profile.clipboard ?: ""
+                if (text.isEmpty()) {
+                    return OperationResult(
+                        success = false,
+                        message = getString(
+                            R.string.toast_error_prefix,
+                            getString(R.string.error_server_not_text)
+                        ),
+                        content = null
+                    )
+                }
+                val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("SyncClipboard", text)
+                clipboardManager.setPrimaryClip(clip)
+                OperationResult(
+                    success = true,
+                    message = getString(R.string.toast_download_success),
+                    content = text
+                )
+            }
+            "File" -> {
+                val fileName = profile.file ?: return OperationResult(
+                    success = false,
+                    message = getString(
+                        R.string.toast_error_prefix,
+                        getString(R.string.error_server_not_text)
+                    ),
+                    content = null
+                )
+                downloadFileToDownloadDir(config, fileName)
+            }
+            else -> {
+                OperationResult(
+                    success = false,
+                    message = getString(
+                        R.string.toast_error_prefix,
+                        getString(R.string.error_server_not_text)
+                    ),
+                    content = null
+                )
+            }
         }
     }
 
@@ -277,6 +321,119 @@ class ProgressActivity : AppCompatActivity() {
         }
     }
 
+    private fun uploadSharedFile(config: ServerConfig): OperationResult {
+        val uriString = intent.getStringExtra(EXTRA_FILE_URI) ?: return OperationResult(
+            success = false,
+            message = getString(
+                R.string.toast_error_prefix,
+                getString(R.string.error_file_missing)
+            ),
+            content = null
+        )
+        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: "shared_file"
+
+        return try {
+            val uri = Uri.parse(uriString)
+            val input = contentResolver.openInputStream(uri)
+                ?: return OperationResult(
+                    success = false,
+                    message = getString(
+                        R.string.toast_error_prefix,
+                        getString(R.string.error_file_open_failed)
+                    ),
+                    content = null
+                )
+
+            input.use { stream ->
+                val result = SyncClipboardApi.uploadFile(config, fileName, stream)
+                if (result.success) {
+                    OperationResult(
+                        success = true,
+                        message = getString(R.string.toast_upload_file_success),
+                        content = fileName
+                    )
+                } else {
+                    OperationResult(
+                        success = false,
+                        message = getString(
+                            R.string.toast_error_prefix,
+                            result.errorMessage ?: getString(R.string.error_file_upload_failed)
+                        ),
+                        content = fileName
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            OperationResult(
+                success = false,
+                message = getString(
+                    R.string.toast_error_prefix,
+                    e.message ?: getString(R.string.error_file_upload_failed)
+                ),
+                content = fileName
+            )
+        }
+    }
+
+    /**
+     * 将服务器上的文件下载到系统公用 Download 目录。
+     */
+    private fun downloadFileToDownloadDir(config: ServerConfig, fileName: String): OperationResult {
+        return try {
+            val values = android.content.ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                put(MediaStore.Downloads.RELATIVE_PATH, "Download")
+            }
+            val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: return OperationResult(
+                    success = false,
+                    message = getString(
+                        R.string.toast_error_prefix,
+                        getString(R.string.error_file_create_failed)
+                    ),
+                    content = null
+                )
+
+            contentResolver.openOutputStream(uri)?.use { out ->
+                val result = SyncClipboardApi.downloadFileToStream(config, fileName, out)
+                if (!result.success) {
+                    return OperationResult(
+                        success = false,
+                        message = getString(
+                            R.string.toast_error_prefix,
+                            result.errorMessage ?: getString(R.string.error_file_download_failed)
+                        ),
+                        content = null
+                    )
+                }
+            } ?: return OperationResult(
+                success = false,
+                message = getString(
+                    R.string.toast_error_prefix,
+                    getString(R.string.error_file_create_failed)
+                ),
+                content = null
+            )
+
+            // 使用简短提示：文件名
+            OperationResult(
+                success = true,
+                message = getString(R.string.toast_download_file_success),
+                content = fileName
+            )
+        } catch (e: Exception) {
+            OperationResult(
+                success = false,
+                message = getString(
+                    R.string.toast_error_prefix,
+                    e.message ?: getString(R.string.error_file_download_failed)
+                ),
+                content = null
+            )
+        }
+    }
+
     private fun testConnection(config: ServerConfig): OperationResult {
         val result = SyncClipboardApi.testConnection(config)
         return if (result.success) {
@@ -300,10 +457,13 @@ class ProgressActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_OPERATION = "operation"
         const val EXTRA_SHARED_TEXT = "shared_text"
+        const val EXTRA_FILE_URI = "file_uri"
+        const val EXTRA_FILE_NAME = "file_name"
 
         const val OP_UPLOAD_CLIPBOARD = "upload_clipboard"
         const val OP_DOWNLOAD_CLIPBOARD = "download_clipboard"
         const val OP_UPLOAD_SHARED_TEXT = "upload_shared_text"
+        const val OP_UPLOAD_FILE = "upload_file"
         const val OP_TEST_CONNECTION = "test_connection"
     }
 }

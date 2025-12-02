@@ -15,6 +15,7 @@
     <string name="progress_upload_clipboard">正在上传剪贴板…</string>
     <string name="progress_download_clipboard">正在下载剪贴板…</string>
     <string name="progress_upload_shared">正在上传分享内容…</string>
+    <string name="progress_upload_file">正在上传文件…</string>
     <string name="progress_test_connection">正在测试连接…</string>
 
     <string name="result_success">成功</string>
@@ -24,11 +25,19 @@
     <string name="toast_upload_success">已上传剪贴板</string>
     <string name="toast_download_success">已写入剪贴板</string>
     <string name="toast_error_prefix">错误原因：%1$s</string>
+    <string name="toast_upload_file_success">已上传文件</string>
+    <string name="toast_download_file_success">文件已下载</string>
 
     <!-- 对话框标题/提示 -->
     <string name="dialog_upload_clipboard_title">当前剪贴板内容</string>
     <string name="dialog_upload_failed_title">上传剪贴板失败</string>
     <string name="dialog_download_failed_title">写入剪贴板失败</string>
+
+    <string name="error_file_missing">未找到要上传的文件。</string>
+    <string name="error_file_open_failed">无法打开要上传的文件。</string>
+    <string name="error_file_upload_failed">上传文件失败。</string>
+    <string name="error_file_create_failed">无法在 Download 目录创建文件。</string>
+    <string name="error_file_download_failed">下载文件失败。</string>
 
     <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>

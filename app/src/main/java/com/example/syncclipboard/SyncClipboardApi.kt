@@ -3,7 +3,9 @@ package com.example.syncclipboard
 import android.util.Base64
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,6 +21,15 @@ import java.net.URL
 object SyncClipboardApi {
 
     data class ApiResult<T>(val success: Boolean, val data: T? = null, val errorMessage: String? = null)
+
+    /**
+     * /SyncClipboard.json 返回的完整信息，用于区分 Text / File 等类型。
+     */
+    data class ClipboardProfile(
+        val type: String,
+        val clipboard: String?,
+        val file: String?
+    )
 
     private fun buildApiUrl(config: ServerConfig): String {
         val trimmed = config.baseUrl.trimEnd('/')
@@ -59,6 +70,42 @@ object SyncClipboardApi {
                     ?: "${conn.responseCode} ${conn.responseMessage}"
                 ApiResult(success = false, errorMessage = message)
             }
+        } catch (e: Exception) {
+            ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        }
+    }
+
+    /**
+     * 获取当前服务器端剪贴板完整 Profile（Type / Clipboard / File）。
+     */
+    fun getClipboardProfile(config: ServerConfig): ApiResult<ClipboardProfile> {
+        return try {
+            val url = URL(buildApiUrl(config))
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("authorization", buildAuthHeader(config))
+            }
+
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val message = readStreamAsString(conn.errorStream)
+                    ?: "${conn.responseCode} ${conn.responseMessage}"
+                return ApiResult(success = false, errorMessage = message)
+            }
+
+            val text = readStreamAsString(conn.inputStream) ?: ""
+            val json = JSONObject(text)
+            val type = json.optString("Type", "")
+            val clipboard = json.optString("Clipboard", null)
+            val file = json.optString("File", null)
+            ApiResult(
+                success = true,
+                data = ClipboardProfile(
+                    type = type,
+                    clipboard = clipboard,
+                    file = file
+                )
+            )
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
         }
@@ -105,6 +152,96 @@ object SyncClipboardApi {
         }
     }
 
+    /**
+     * 上传文件到服务器：
+     * 1) PUT /file/{fileName} 上传文件内容
+     * 2) PUT /SyncClipboard.json 设置 Type = File, File = fileName
+     */
+    fun uploadFile(config: ServerConfig, fileName: String, input: InputStream): ApiResult<Unit> {
+        return try {
+            val baseUrl = config.baseUrl.trimEnd('/')
+            val fileUrl = URL("$baseUrl/file/$fileName")
+
+            // 第一步：上传文件内容
+            val uploadConn = (fileUrl.openConnection() as HttpURLConnection).apply {
+                requestMethod = "PUT"
+                doOutput = true
+                setRequestProperty("authorization", buildAuthHeader(config))
+            }
+
+            uploadConn.outputStream.use { out ->
+                copyStream(input, out)
+            }
+
+            val uploadCode = uploadConn.responseCode
+            if (uploadCode !in 200..299) {
+                val message = readStreamAsString(uploadConn.errorStream)
+                    ?: "${uploadConn.responseCode} ${uploadConn.responseMessage}"
+                return ApiResult(success = false, errorMessage = message)
+            }
+
+            // 第二步：更新 SyncClipboard.json 为 File 类型
+            val syncUrl = URL(buildApiUrl(config))
+            val syncConn = (syncUrl.openConnection() as HttpURLConnection).apply {
+                requestMethod = "PUT"
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("authorization", buildAuthHeader(config))
+            }
+
+            val body = JSONObject().apply {
+                put("File", fileName)
+                put("Clipboard", "")
+                put("Type", "File")
+            }.toString()
+
+            OutputStreamWriter(syncConn.outputStream, Charsets.UTF_8).use { writer ->
+                writer.write(body)
+            }
+
+            val syncCode = syncConn.responseCode
+            if (syncCode in 200..299) {
+                ApiResult(success = true)
+            } else {
+                val message = readStreamAsString(syncConn.errorStream)
+                    ?: "${syncConn.responseCode} ${syncConn.responseMessage}"
+                ApiResult(success = false, errorMessage = message)
+            }
+        } catch (e: Exception) {
+            ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        }
+    }
+
+    /**
+     * 下载服务器上指定文件名的内容到给定输出流。
+     * 具体保存位置由调用方决定。
+     */
+    fun downloadFileToStream(config: ServerConfig, fileName: String, out: OutputStream): ApiResult<Unit> {
+        return try {
+            val baseUrl = config.baseUrl.trimEnd('/')
+            val fileUrl = URL("$baseUrl/file/$fileName")
+
+            val conn = (fileUrl.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("authorization", buildAuthHeader(config))
+            }
+
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val message = readStreamAsString(conn.errorStream)
+                    ?: "${conn.responseCode} ${conn.responseMessage}"
+                return ApiResult(success = false, errorMessage = message)
+            }
+
+            conn.inputStream.use { input ->
+                copyStream(input, out)
+            }
+            ApiResult(success = true)
+        } catch (e: Exception) {
+            ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        }
+    }
+
     private fun readStreamAsString(stream: java.io.InputStream?): String? {
         if (stream == null) return null
         return try {
@@ -122,5 +259,13 @@ object SyncClipboardApi {
             null
         }
     }
-}
 
+    private fun copyStream(input: InputStream, output: OutputStream) {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count <= 0) break
+            output.write(buffer, 0, count)
+        }
+    }
+}
