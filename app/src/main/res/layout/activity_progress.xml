@@ -37,7 +37,7 @@
         android:ellipsize="end"
         android:textSize="14sp" />
 
-    <!-- 操作按钮：使用 MaterialButton，自动使用主题/动态配色的主色和圆角 -->
+    <!-- 操作按钮：用于“开始上传”“打开文件”等单一操作 -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonAction"
         style="@style/Widget.MaterialComponents.Button"
@@ -46,5 +46,31 @@
         android:layout_marginTop="20dp"
         android:text="@string/button_start"
         android:visibility="gone" />
+
+    <!-- 文件名冲突时的两个操作按钮：“替换”和“保留” -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonReplace"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/button_replace"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonKeepBoth"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/button_keep_both"
+            android:layout_marginStart="12dp"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </LinearLayout>

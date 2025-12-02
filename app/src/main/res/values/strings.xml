@@ -51,4 +51,12 @@
     <!-- 设置界面：BottomSheet 点击外部是否关闭 -->
     <string name="settings_bottom_sheet_behavior_title">BottomSheet 行为</string>
     <string name="settings_bottom_sheet_cancel_on_touch_outside">点击空白处关闭底部弹窗</string>
+
+    <!-- 按钮：打开刚刚下载的文件 -->
+    <string name="button_open_file">打开</string>
+
+    <!-- 文件下载：同名文件处理 -->
+    <string name="file_conflict_message">目标目录中已存在同名文件，是否保留已存在的同名文件？</string>
+    <string name="button_replace">替换</string>
+    <string name="button_keep_both">保留</string>
 </resources>

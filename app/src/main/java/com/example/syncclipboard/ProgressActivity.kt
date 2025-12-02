@@ -4,6 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -30,10 +33,14 @@ class ProgressActivity : AppCompatActivity() {
     private var requireUserTap = false
     private var useBottomSheet = false
     private var bottomSheetDialog: BottomSheetDialog? = null
+    private var lastDownloadedFileUri: Uri? = null
+    private var lastDownloadedFileName: String? = null
 
     private lateinit var textStatus: TextView
     private lateinit var textContent: TextView
     private lateinit var buttonAction: Button
+    private lateinit var buttonReplace: Button
+    private lateinit var buttonKeepBoth: Button
 
     /**
      * 简单封装一次操作的结果：
@@ -76,6 +83,8 @@ class ProgressActivity : AppCompatActivity() {
             textStatus = view.findViewById(R.id.textStatus)
             textContent = view.findViewById(R.id.textContent)
             buttonAction = view.findViewById(R.id.buttonAction)
+            buttonReplace = view.findViewById(R.id.buttonReplace)
+            buttonKeepBoth = view.findViewById(R.id.buttonKeepBoth)
 
             dialog.setOnDismissListener {
                 // 底部弹窗关闭时结束 Activity，行为类似对话框
@@ -92,6 +101,8 @@ class ProgressActivity : AppCompatActivity() {
             textStatus = findViewById(R.id.textStatus)
             textContent = findViewById(R.id.textContent)
             buttonAction = findViewById(R.id.buttonAction)
+            buttonReplace = findViewById(R.id.buttonReplace)
+            buttonKeepBoth = findViewById(R.id.buttonKeepBoth)
         }
 
         currentOperation = operation
@@ -174,19 +185,40 @@ class ProgressActivity : AppCompatActivity() {
                 // 下载剪贴板 / 文件：根据结果显示“已写入剪贴板”或“文件已下载”等文案
                 if (operation == OP_DOWNLOAD_CLIPBOARD) {
                     if (result.success) {
-                        // 对于文本：message = “已写入剪贴板”
-                        // 对于文件：message = “文件已下载”
-                        textStatus.text = result.message
-                        if (!result.content.isNullOrEmpty()) {
-                            textContent.visibility = View.VISIBLE
-                            textContent.text = result.content
+                        // 如果存在 lastDownloadedFileUri，说明本次是“文件下载”场景
+                        if (lastDownloadedFileUri != null) {
+                            // 标题显示“已保存至 路径…”
+                            textStatus.text = result.message
+                            // 内容区域只展示文件名
+                            val fileName = lastDownloadedFileName ?: result.content ?: ""
+                            if (fileName.isNotEmpty()) {
+                                textContent.visibility = View.VISIBLE
+                                textContent.text = fileName
+                            } else {
+                                textContent.visibility = View.GONE
+                            }
+                            // 显示“打开”按钮，点击后调用系统根据类型选择可打开的应用
+                            buttonAction.visibility = View.VISIBLE
+                            buttonAction.text = getString(R.string.button_open_file)
+                            buttonAction.setOnClickListener {
+                                openDownloadedFile()
+                            }
                         } else {
-                            textContent.visibility = View.GONE
+                            // 文本剪贴板下载：沿用原有显示逻辑
+                            textStatus.text = result.message
+                            if (!result.content.isNullOrEmpty()) {
+                                textContent.visibility = View.VISIBLE
+                                textContent.text = result.content
+                            } else {
+                                textContent.visibility = View.GONE
+                            }
+                            buttonAction.visibility = View.GONE
                         }
                     } else {
                         textStatus.text = getString(R.string.dialog_download_failed_title)
                         textContent.visibility = View.VISIBLE
                         textContent.text = result.message
+                        buttonAction.visibility = View.GONE
                     }
                 } else {
                     // 分享上传 / 测试连接：沿用通用文案，显示结果和内容
@@ -482,25 +514,63 @@ class ProgressActivity : AppCompatActivity() {
                 textContent.visibility = View.GONE
             }
 
-            val values = android.content.ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
-                put(MediaStore.Downloads.RELATIVE_PATH, "Download")
-            }
-            val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: return OperationResult(
-                    success = false,
-                    message = getString(
-                        R.string.toast_error_prefix,
-                        getString(R.string.error_file_create_failed)
-                    ),
-                    content = null
-                )
+            // 下载目录绝对路径，用于提示“已保存至 …”
+            val downloadDirPath = Environment
+                .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                .absolutePath
 
-            contentResolver.openOutputStream(uri)?.use { out ->
+            // 先检查是否存在同名文件
+            val existingUri = findExistingDownloadEntry(fileName)
+
+            // 根据是否有同名文件以及用户选择，确定最终要使用的文件名和目标 Uri
+            val (targetUri, finalFileName) = if (existingUri == null) {
+                // 无同名文件，直接按原文件名创建新条目
+                val values = android.content.ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "Download")
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return OperationResult(
+                        success = false,
+                        message = getString(
+                            R.string.toast_error_prefix,
+                            getString(R.string.error_file_create_failed)
+                        ),
+                        content = null
+                    )
+                uri to fileName
+            } else {
+                // 已存在同名文件，询问用户是“替换”还是“保留”
+                val decision = waitUserDecisionForFileConflict(fileName)
+                if (decision == FileConflictDecision.REPLACE) {
+                    // 替换：直接覆盖已有条目内容
+                    existingUri to fileName
+                } else {
+                    // 保留：生成一个不修改后缀的新文件名，例如 "name (2).ext"
+                    val newName = generateNonConflictingDownloadName(fileName)
+                    val values = android.content.ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, newName)
+                        put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                        put(MediaStore.Downloads.RELATIVE_PATH, "Download")
+                    }
+                    val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                        ?: return OperationResult(
+                            success = false,
+                            message = getString(
+                                R.string.toast_error_prefix,
+                                getString(R.string.error_file_create_failed)
+                            ),
+                            content = null
+                        )
+                    uri to newName
+                }
+            }
+
+            contentResolver.openOutputStream(targetUri, "w")?.use { out ->
                 val result = SyncClipboardApi.downloadFileToStream(
                     config,
-                    fileName,
+                    finalFileName,
                     out
                 ) { downloaded, total ->
                     // 下载进度回调：在 UI 线程上更新文案
@@ -536,18 +606,16 @@ class ProgressActivity : AppCompatActivity() {
                 content = null
             )
 
-            // 步骤 3：文件已成功保存，组成“文件名已下载到路径”的说明文字
-            val downloadDirPath = Environment
-                .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                .absolutePath
-            val finalLine = "\"$fileName\" 已下载到 \"$downloadDirPath\""
+            // 记录本次下载的文件信息，便于在界面上展示文件名并支持“打开”按钮
+            lastDownloadedFileUri = targetUri
+            lastDownloadedFileName = finalFileName
 
             OperationResult(
                 success = true,
-                // 标题行按你的要求直接显示“文件已下载到 …”
-                message = "文件已下载到 $downloadDirPath",
-                // 下方内容显示具体文件名 + 路径
-                content = finalLine
+                // 标题：已保存至 "路径"
+                message = "已保存至 \"$downloadDirPath\"",
+                // 内容：只显示文件名
+                content = finalFileName
             )
         } catch (e: Exception) {
             OperationResult(
@@ -611,6 +679,128 @@ class ProgressActivity : AppCompatActivity() {
                 ),
                 content = null
             )
+        }
+    }
+
+    /**
+     * 文件名冲突时用户的选择：替换或保留。
+     */
+    private enum class FileConflictDecision {
+        REPLACE,
+        KEEP_BOTH
+    }
+
+    /**
+     * 在 Download 媒体库中查找给定文件名的现有条目（若存在）。
+     */
+    private fun findExistingDownloadEntry(fileName: String): Uri? {
+        val projection = arrayOf(
+            MediaStore.Downloads._ID,
+            MediaStore.Downloads.DISPLAY_NAME
+        )
+        val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
+        val selectionArgs = arrayOf(fileName)
+
+        contentResolver.query(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idIndex = cursor.getColumnIndex(MediaStore.Downloads._ID)
+                if (idIndex >= 0) {
+                    val id = cursor.getLong(idIndex)
+                    return ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 生成一个不会与现有文件冲突的文件名，只在原始文件名基础上追加 "(2)"、"(3)" 等，
+     * 不修改后缀。
+     */
+    private fun generateNonConflictingDownloadName(originalName: String): String {
+        val dotIndex = originalName.lastIndexOf('.')
+        val base = if (dotIndex > 0) originalName.substring(0, dotIndex) else originalName
+        val ext = if (dotIndex > 0) originalName.substring(dotIndex) else ""
+
+        var index = 2
+        while (true) {
+            val candidate = "$base ($index)$ext"
+            if (findExistingDownloadEntry(candidate) == null) {
+                return candidate
+            }
+            index++
+        }
+    }
+
+    /**
+     * 在 UI 上询问用户对于同名文件是“替换”还是“保留”。
+     * 该函数会阻塞当前后台线程，直到用户做出选择。
+     */
+    private fun waitUserDecisionForFileConflict(fileName: String): FileConflictDecision {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var decision = FileConflictDecision.REPLACE
+
+        runOnUiThread {
+            // 标题显示文件名，正文询问是否保留已存在的同名文件
+            textStatus.text = fileName
+            textContent.visibility = View.VISIBLE
+            textContent.text = getString(R.string.file_conflict_message)
+
+            // 显示“替换”和“保留”两个按钮，隐藏单一操作按钮
+            buttonAction.visibility = View.GONE
+            buttonReplace.visibility = View.VISIBLE
+            buttonKeepBoth.visibility = View.VISIBLE
+
+            buttonReplace.text = getString(R.string.button_replace)
+            buttonKeepBoth.text = getString(R.string.button_keep_both)
+
+            buttonReplace.setOnClickListener {
+                decision = FileConflictDecision.REPLACE
+                latch.countDown()
+            }
+            buttonKeepBoth.setOnClickListener {
+                decision = FileConflictDecision.KEEP_BOTH
+                latch.countDown()
+            }
+        }
+
+        try {
+            latch.await()
+        } catch (_: InterruptedException) {
+        }
+
+        // 用户已选择，隐藏两个按钮，避免影响后续界面
+        runOnUiThread {
+            buttonReplace.visibility = View.GONE
+            buttonKeepBoth.visibility = View.GONE
+        }
+
+        return decision
+    }
+
+    /**
+     * 打开刚刚下载的文件：交给系统根据 MIME 类型选择可用的应用。
+     */
+    private fun openDownloadedFile() {
+        val uri = lastDownloadedFileUri ?: return
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "*/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(
+                this,
+                "没有可用于打开该文件的应用",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
