@@ -1,30 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:gravity="center_horizontal">
 
+    <!-- 顶部图标：使用应用图标，并通过 tint 使用主题色（支持莫奈动态配色） -->
+    <ImageView
+        android:id="@+id/imageStatus"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_launcher"
+        android:tint="?attr/colorPrimary"
+        android:contentDescription="@string/app_name"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 状态标题：稍大字号、加粗，居中显示当前操作状态 -->
     <TextView
         android:id="@+id/textStatus"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center_horizontal" />
 
+    <!-- 详细内容：次级文字，用于展示剪贴板内容或错误信息 -->
     <TextView
         android:id="@+id/textContent"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:maxLines="2"
         android:ellipsize="end"
         android:textSize="14sp" />
 
-    <Button
+    <!-- 操作按钮：使用 MaterialButton，自动使用主题/动态配色的主色和圆角 -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonAction"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="20dp"
         android:text="@string/button_start"
         android:visibility="gone" />
 

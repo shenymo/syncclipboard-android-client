@@ -5,6 +5,27 @@ android {
     namespace "com.example.syncclipboard"
     compileSdkVersion 35
 
+    // 是否配置了用于发布的签名参数（用于可选的 release 签名）
+    def hasReleaseSigningConfig =
+            project.hasProperty("RELEASE_STORE_FILE") &&
+            project.hasProperty("RELEASE_STORE_PASSWORD") &&
+            project.hasProperty("RELEASE_KEY_ALIAS") &&
+            project.hasProperty("RELEASE_KEY_PASSWORD")
+
+    // 可选的 release 签名配置：
+    // - 本地开发可以在 gradle.properties 或 local.properties 中填入上述属性
+    // - CI 中可以通过环境变量 ORG_GRADLE_PROJECT_xxx 传入
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(project.property("RELEASE_STORE_FILE"))
+                storePassword project.property("RELEASE_STORE_PASSWORD")
+                keyAlias project.property("RELEASE_KEY_ALIAS")
+                keyPassword project.property("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.syncclipboard"
         minSdkVersion 31
@@ -15,6 +36,10 @@ android {
 
     buildTypes {
         release {
+            // 只有在配置了签名参数时才启用 release 签名；否则保持未签名的 release 包。
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
@@ -43,4 +68,3 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         jvmTarget = "1.8"
     }
 }
-
