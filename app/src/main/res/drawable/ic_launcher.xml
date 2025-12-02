@@ -2,14 +2,49 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
 
-    <!-- 非常简单的占位图标：一个纯色圆形 -->
+    <!-- 应用图标：外圈圆形背景 + 内部卡片与多行文本 -->
     <path
-        android:fillColor="#6200EE"
-        android:pathData="M54,4
-                          A50,50 0 1,1 53.9,4" />
+        android:fillColor="#FF95BAF9"
+        android:pathData="M515.53 511.994m-495.082 0a495.082 495.082 0 1 0 990.164 0 495.082 495.082 0 1 0-990.164 0Z" />
+
+    <path
+        android:fillColor="#FF0A2BDE"
+        android:pathData="M709.882 128.214H321.176c-85.654 0-155.338 69.686-155.338 155.34v390.382l0.002 0.004v68.488c0 85.654 69.684 155.34 155.338 155.34h388.708c85.654 0 155.338-69.686 155.338-155.34V283.556c0-85.654-69.684-155.342-155.342-155.342z" />
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M279.442 233.812h472.18v558.362h-472.18z" />
+
+    <path
+        android:fillColor="#FF95BAF9"
+        android:pathData="M324.52 161.624v99.154c0 50.08 40.742 90.822 90.824 90.822H615.72c50.08 0 90.822-40.742 90.822-90.822V161.624H324.52z" />
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M362.614 424.836h305.836" />
+
+    <path
+        android:fillColor="#FF95BAF9"
+        android:pathData="M362.614 401.504h305.836v46.662H362.614z" />
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M362.614 534.97h305.836" />
+
+    <path
+        android:fillColor="#FF95BAF9"
+        android:pathData="M362.614 511.64h305.836v46.66H362.614z" />
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M362.614 645.106h305.836" />
+
+    <path
+        android:fillColor="#FF95BAF9"
+        android:pathData="M362.614 621.774h305.836v46.66H362.614z" />
 
 </vector>
 
