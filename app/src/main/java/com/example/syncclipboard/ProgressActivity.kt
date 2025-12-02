@@ -23,8 +23,6 @@ class ProgressActivity : AppCompatActivity() {
     private var started = false
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
     private var requireUserTap = false
-    private var previewedClipboard = false
-    private var clipboardPreviewText: String? = null
 
     private lateinit var textStatus: TextView
     private lateinit var textContent: TextView
@@ -58,7 +56,8 @@ class ProgressActivity : AppCompatActivity() {
         currentOperation = operation
 
         if (operation == OP_UPLOAD_CLIPBOARD) {
-            textStatus.text = getString(R.string.dialog_upload_clipboard_title)
+            // 上传剪贴板：上传前不显示内容预览，只在按钮下方显示结果文字
+            textStatus.text = ""
             // 上传本机剪贴板必须由用户在本应用内点击触发，
             // 否则 Android 会认为是后台读剪贴板而拒绝访问。
             requireUserTap = true
@@ -77,13 +76,9 @@ class ProgressActivity : AppCompatActivity() {
                         performOperation(OP_UPLOAD_CLIPBOARD)
                     }
 
+                    // 上传完成后只显示结果文字，不展示剪贴板内容
                     textStatus.text = result.message
-                    if (!result.content.isNullOrEmpty()) {
-                        textContent.visibility = View.VISIBLE
-                        textContent.text = result.content
-                    } else {
-                        textContent.visibility = View.GONE
-                    }
+                    textContent.visibility = View.GONE
 
                     Toast.makeText(
                         this@ProgressActivity,
@@ -108,30 +103,6 @@ class ProgressActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
-        // 上传剪贴板：在获得焦点后，先预览当前剪贴板内容（最多两行），
-        // 实际上传仍由用户点击按钮触发。
-        if (currentOperation == OP_UPLOAD_CLIPBOARD && !previewedClipboard) {
-            previewedClipboard = true
-            window.decorView.post {
-                val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = clipboardManager.primaryClip
-                val text = if (clip != null && clip.itemCount > 0) {
-                    clip.getItemAt(0).coerceToText(this).toString()
-                } else {
-                    ""
-                }
-                clipboardPreviewText = text
-
-                if (text.isNotEmpty()) {
-                    textContent.visibility = View.VISIBLE
-                    textContent.text = text
-                } else {
-                    textContent.visibility = View.VISIBLE
-                    textContent.text = getString(R.string.error_clipboard_empty)
-                }
-            }
-        }
 
         // 对于上传剪贴板的场景，必须等用户点击按钮才执行，
         // 避免在应用未获得聚焦或无用户手势时访问剪贴板被系统拒绝。
@@ -165,13 +136,18 @@ class ProgressActivity : AppCompatActivity() {
                         textContent.text = result.message
                     }
                 } else {
-                    // 分享上传 / 测试连接：沿用通用文案
+                    // 分享上传 / 测试连接：沿用通用文案，显示结果和内容
+                    // 上传剪贴板则只显示结果，不显示内容
                     textStatus.text = result.message
-                    if (!result.content.isNullOrEmpty()) {
-                        textContent.visibility = View.VISIBLE
-                        textContent.text = result.content
-                    } else {
+                    if (operation == OP_UPLOAD_CLIPBOARD) {
                         textContent.visibility = View.GONE
+                    } else {
+                        if (!result.content.isNullOrEmpty()) {
+                            textContent.visibility = View.VISIBLE
+                            textContent.text = result.content
+                        } else {
+                            textContent.visibility = View.GONE
+                        }
                     }
                 }
 
