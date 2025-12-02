@@ -19,6 +19,10 @@ import kotlinx.coroutines.withContext
  */
 class ProgressActivity : AppCompatActivity() {
 
+    // 记录当前要执行的操作类型，以及是否已经启动过，避免同一个实例多次执行。
+    private var started = false
+    private var currentOperation: String = OP_UPLOAD_CLIPBOARD
+
     /**
      * 简单封装一次操作的结果：
      * - success 表示是否成功
@@ -45,22 +49,36 @@ class ProgressActivity : AppCompatActivity() {
             else -> getString(R.string.progress_upload_clipboard)
         }
 
-        // 对于上传/下载/分享/测试，统一采用：
-        // - 弹出一个小的对话框样式 Activity 作为前台界面
-        // - 自动执行操作，不再需要额外点击
-        // - 完成后只弹 Toast 提示结果，然后结束当前任务
+        // 统一采用对话框样式的小窗口，只显示状态文字，不需要用户点击
         buttonAction.visibility = View.GONE
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                performOperation(operation)
-            }
 
-            Toast.makeText(
-                this@ProgressActivity,
-                result.message,
-                Toast.LENGTH_SHORT
-            ).show()
-            finishAffinity()
+        // 真正启动上传/下载逻辑的时机放在 onResume 里，
+        // 避免在 Activity 尚未获得焦点时访问剪贴板被系统拒绝。
+        currentOperation = operation
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // 只在第一次恢复时启动一次操作，避免因重建/旋转等重复执行
+        if (started) return
+        started = true
+
+        // 使用 post 把执行逻辑放到界面绘制之后，进一步确保已获得窗口焦点
+        window.decorView.post {
+            val operation = currentOperation
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    performOperation(operation)
+                }
+
+                Toast.makeText(
+                    this@ProgressActivity,
+                    result.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                finishAffinity()
+            }
         }
     }
 

@@ -25,7 +25,9 @@
         <activity
             android:name=".ProgressActivity"
             android:exported="true"
-            android:theme="@style/Theme.SyncClipboard.Dialog" />
+            android:theme="@style/Theme.SyncClipboard.Dialog"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.example.syncclipboard.qs" />
 
         <activity
             android:name=".ShareReceiveActivity"
