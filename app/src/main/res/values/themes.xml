@@ -6,4 +6,11 @@
         <item name="colorAccent">@color/teal_200</item>
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
     </style>
+
+    <!-- 用于 ProgressActivity 的对话框样式主题，显示为小窗口 -->
+    <style name="Theme.SyncClipboard.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+    </style>
 </resources>

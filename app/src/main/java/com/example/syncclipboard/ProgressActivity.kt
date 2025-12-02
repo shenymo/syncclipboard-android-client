@@ -45,40 +45,22 @@ class ProgressActivity : AppCompatActivity() {
             else -> getString(R.string.progress_upload_clipboard)
         }
 
-        if (operation == OP_UPLOAD_CLIPBOARD) {
-            // 从磁贴上传剪贴板时，为了满足系统“前台 + 用户交互”要求，
-            // 等用户点击按钮后再访问剪贴板。
-            buttonAction.visibility = View.VISIBLE
-            buttonAction.setOnClickListener {
-                buttonAction.isEnabled = false
-                lifecycleScope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        performOperation(operation)
-                    }
-
-                    // 无论成功或失败，只通过 Toast 提示结果，然后立即结束当前任务
-                    Toast.makeText(
-                        this@ProgressActivity,
-                        result.message,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    finishAffinity()
-                }
+        // 对于上传/下载/分享/测试，统一采用：
+        // - 弹出一个小的对话框样式 Activity 作为前台界面
+        // - 自动执行操作，不再需要额外点击
+        // - 完成后只弹 Toast 提示结果，然后结束当前任务
+        buttonAction.visibility = View.GONE
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                performOperation(operation)
             }
-        } else {
-            buttonAction.visibility = View.GONE
-            lifecycleScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    performOperation(operation)
-                }
 
-                Toast.makeText(
-                    this@ProgressActivity,
-                    result.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-                finishAffinity()
-            }
+            Toast.makeText(
+                this@ProgressActivity,
+                result.message,
+                Toast.LENGTH_SHORT
+            ).show()
+            finishAffinity()
         }
     }
 

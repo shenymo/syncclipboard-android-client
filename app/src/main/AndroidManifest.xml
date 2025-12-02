@@ -24,7 +24,8 @@
 
         <activity
             android:name=".ProgressActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:theme="@style/Theme.SyncClipboard.Dialog" />
 
         <activity
             android:name=".ShareReceiveActivity"
