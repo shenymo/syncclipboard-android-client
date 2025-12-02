@@ -234,7 +234,7 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun downloadClipboard(config: ServerConfig): OperationResult {
-        // 先获取完整 Profile，根据 Type 决定是文本还是文件
+        // 先获取完整 Profile，根据 File / Type 决定是文件还是文本。
         val profileResult = SyncClipboardApi.getClipboardProfile(config)
         if (!profileResult.success || profileResult.data == null) {
             return OperationResult(
@@ -248,50 +248,44 @@ class ProgressActivity : AppCompatActivity() {
         }
 
         val profile = profileResult.data
-        return when (profile.type) {
-            "Text" -> {
-                val text = profile.clipboard ?: ""
-                if (text.isEmpty()) {
-                    return OperationResult(
-                        success = false,
-                        message = getString(
-                            R.string.toast_error_prefix,
-                            getString(R.string.error_server_not_text)
-                        ),
-                        content = null
-                    )
-                }
-                val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("SyncClipboard", text)
-                clipboardManager.setPrimaryClip(clip)
-                OperationResult(
-                    success = true,
-                    message = getString(R.string.toast_download_success),
-                    content = text
-                )
-            }
-            "File" -> {
-                val fileName = profile.file ?: return OperationResult(
-                    success = false,
-                    message = getString(
-                        R.string.toast_error_prefix,
-                        getString(R.string.error_server_not_text)
-                    ),
-                    content = null
-                )
-                downloadFileToDownloadDir(config, fileName)
-            }
-            else -> {
-                OperationResult(
-                    success = false,
-                    message = getString(
-                        R.string.toast_error_prefix,
-                        getString(R.string.error_server_not_text)
-                    ),
-                    content = null
-                )
-            }
+        // 优先根据 File 字段判断是否为文件模式：只要服务器返回了 File 名，就按文件处理，
+        // 避免 Type 值不规范（例如 Image、自定义字符串）导致误判。
+        if (!profile.file.isNullOrEmpty()) {
+            return downloadFileToDownloadDir(config, profile.file)
         }
+
+        // 其次再看 Text 模式
+        if (profile.type == "Text") {
+            val text = profile.clipboard ?: ""
+            if (text.isEmpty()) {
+                return OperationResult(
+                    success = false,
+                    message = getString(
+                        R.string.toast_error_prefix,
+                        getString(R.string.error_server_not_text)
+                    ),
+                    content = null
+                )
+            }
+            val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("SyncClipboard", text)
+            clipboardManager.setPrimaryClip(clip)
+            return OperationResult(
+                success = true,
+                message = getString(R.string.toast_download_success),
+                content = text
+            )
+        }
+
+        // 既不是 File，也不是 Text，则提示不支持
+        return OperationResult(
+            success = false,
+            message = getString(
+                R.string.toast_error_prefix,
+                getString(R.string.error_server_not_text)
+            ),
+            content = null
+        )
     }
 
     private fun uploadSharedText(config: ServerConfig): OperationResult {

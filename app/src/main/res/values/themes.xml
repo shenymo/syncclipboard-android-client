@@ -7,11 +7,13 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
     </style>
 
-    <!-- 用于 ProgressActivity 的“伪对话框”主题：全屏窗口，中间显示小卡片，不透出底层主界面 -->
-    <style name="Theme.SyncClipboard.Dialog" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- 用于 ProgressActivity 的对话框样式主题：小窗口悬浮在当前前台内容之上 -->
+    <style name="Theme.SyncClipboard.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorAccent">@color/teal_200</item>
         <item name="android:windowNoTitle">true</item>
+        <!-- 允许看到下方当前应用内容，尽量不打断前台 -->
+        <item name="android:windowIsTranslucent">true</item>
     </style>
 </resources>
