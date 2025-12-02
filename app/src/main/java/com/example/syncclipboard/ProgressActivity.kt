@@ -333,6 +333,12 @@ class ProgressActivity : AppCompatActivity() {
         return try {
             val uri = Uri.parse(uriString)
 
+            // 步骤 1：在 UI 上提示“准备上传文件”
+            runOnUiThread {
+                textStatus.text = "正在准备上传文件…"
+                textContent.visibility = View.GONE
+            }
+
             // 尝试获取文件大小，用于更准确显示上传进度；失败则记为未知大小
             var totalBytes: Long = -1L
             if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
@@ -381,6 +387,11 @@ class ProgressActivity : AppCompatActivity() {
                     }
                 }
                 if (result.success) {
+                    // 步骤 3：文件上传完毕，正在等待服务器确认剪贴板状态更新
+                    runOnUiThread {
+                        textStatus.text = "上传完成，正在更新服务器状态…"
+                        textContent.visibility = View.GONE
+                    }
                     OperationResult(
                         success = true,
                         message = getString(R.string.toast_upload_file_success),
@@ -415,6 +426,12 @@ class ProgressActivity : AppCompatActivity() {
     private fun downloadFileToDownloadDir(config: ServerConfig, fileName: String): OperationResult {
         return try {
             val startTime = System.currentTimeMillis()
+
+            // 步骤 1：在 UI 上提示正在准备下载文件
+            runOnUiThread {
+                textStatus.text = "正在准备下载文件…"
+                textContent.visibility = View.GONE
+            }
 
             val values = android.content.ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
