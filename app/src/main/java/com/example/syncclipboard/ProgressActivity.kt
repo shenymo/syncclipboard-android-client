@@ -487,16 +487,24 @@ class ProgressActivity : AppCompatActivity() {
                 content = null
             )
 
-            // 组成“文件名已下载到路径”的说明文字
+            // 步骤 3：网络传输完成，正在保存到 Download 目录
+            runOnUiThread {
+                textStatus.text = "下载完成，正在保存到 Download…"
+                textContent.visibility = View.GONE
+            }
+
+            // 步骤 4：文件已成功保存，组成“文件名已下载到路径”的说明文字
             val downloadDirPath = Environment
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 .absolutePath
-            val contentText = "\"$fileName\" 已下载到 \"$downloadDirPath\""
+            val finalLine = "\"$fileName\" 已下载到 \"$downloadDirPath\""
 
             OperationResult(
                 success = true,
-                message = getString(R.string.toast_download_file_success),
-                content = contentText
+                // 标题行按你的要求直接显示“文件已下载到 …”
+                message = "文件已下载到 $downloadDirPath",
+                // 下方内容显示具体文件名 + 路径
+                content = finalLine
             )
         } catch (e: Exception) {
             OperationResult(
