@@ -25,6 +25,11 @@
     <string name="toast_download_success">已写入剪贴板</string>
     <string name="toast_error_prefix">错误原因：%1$s</string>
 
+    <!-- 对话框标题/提示 -->
+    <string name="dialog_upload_clipboard_title">当前剪贴板内容</string>
+    <string name="dialog_upload_failed_title">上传剪贴板失败</string>
+    <string name="dialog_download_failed_title">写入剪贴板失败</string>
+
     <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>

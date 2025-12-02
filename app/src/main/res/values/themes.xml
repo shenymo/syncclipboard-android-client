@@ -12,5 +12,7 @@
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorAccent">@color/teal_200</item>
+        <!-- 去掉系统标题栏，避免显示应用名称 -->
+        <item name="android:windowNoTitle">true</item>
     </style>
 </resources>
