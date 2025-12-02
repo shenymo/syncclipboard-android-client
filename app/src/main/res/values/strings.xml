@@ -20,8 +20,12 @@
     <string name="result_success">成功</string>
     <string name="result_failed">失败：%1$s</string>
 
+    <!-- Toast 提示 -->
+    <string name="toast_upload_success">已上传剪贴板</string>
+    <string name="toast_download_success">已写入剪贴板</string>
+    <string name="toast_error_prefix">错误原因：%1$s</string>
+
     <string name="error_config_missing">请先在设置界面配置服务器地址、用户名和 Token。</string>
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>
 </resources>
-

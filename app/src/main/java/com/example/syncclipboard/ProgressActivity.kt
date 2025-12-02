@@ -55,20 +55,14 @@ class ProgressActivity : AppCompatActivity() {
                     val result = withContext(Dispatchers.IO) {
                         performOperation(operation)
                     }
-                    textStatus.text = result.message
 
-                    if (result.success) {
-                        // 成功时自动退出整个应用任务，避免回到设置主界面
-                        Toast.makeText(
-                            this@ProgressActivity,
-                            result.message,
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        finishAffinity()
-                    } else {
-                        // 失败时停留在当前界面，允许用户查看错误信息或重试
-                        buttonAction.isEnabled = true
-                    }
+                    // 无论成功或失败，只通过 Toast 提示结果，然后立即结束当前任务
+                    Toast.makeText(
+                        this@ProgressActivity,
+                        result.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finishAffinity()
                 }
             }
         } else {
@@ -77,19 +71,13 @@ class ProgressActivity : AppCompatActivity() {
                 val result = withContext(Dispatchers.IO) {
                     performOperation(operation)
                 }
-                textStatus.text = result.message
 
-                // 从磁贴或分享入口触发时：
-                // - 成功：自动退出应用任务，回到之前的应用/桌面
-                // - 失败：停留在失败界面
-                if (result.success) {
-                    Toast.makeText(
-                        this@ProgressActivity,
-                        result.message,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    finishAffinity()
-                }
+                Toast.makeText(
+                    this@ProgressActivity,
+                    result.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                finishAffinity()
             }
         }
     }
@@ -99,7 +87,7 @@ class ProgressActivity : AppCompatActivity() {
             ?: return OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     getString(R.string.error_config_missing)
                 )
             )
@@ -112,7 +100,7 @@ class ProgressActivity : AppCompatActivity() {
             else -> OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     getString(R.string.error_config_missing)
                 )
             )
@@ -131,7 +119,7 @@ class ProgressActivity : AppCompatActivity() {
             return OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     getString(R.string.error_clipboard_empty)
                 )
             )
@@ -141,13 +129,13 @@ class ProgressActivity : AppCompatActivity() {
         return if (result.success) {
             OperationResult(
                 success = true,
-                message = getString(R.string.result_success)
+                message = getString(R.string.toast_upload_success)
             )
         } else {
             OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
                 )
             )
@@ -162,13 +150,13 @@ class ProgressActivity : AppCompatActivity() {
             clipboardManager.setPrimaryClip(clip)
             OperationResult(
                 success = true,
-                message = getString(R.string.result_success)
+                message = getString(R.string.toast_download_success)
             )
         } else {
             val message = result.errorMessage ?: getString(R.string.error_server_not_text)
             OperationResult(
                 success = false,
-                message = getString(R.string.result_failed, message)
+                message = getString(R.string.toast_error_prefix, message)
             )
         }
     }
@@ -179,7 +167,7 @@ class ProgressActivity : AppCompatActivity() {
             return OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     getString(R.string.error_clipboard_empty)
                 )
             )
@@ -188,13 +176,13 @@ class ProgressActivity : AppCompatActivity() {
         return if (result.success) {
             OperationResult(
                 success = true,
-                message = getString(R.string.result_success)
+                message = getString(R.string.toast_upload_success)
             )
         } else {
             OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
                 )
             )
@@ -212,7 +200,7 @@ class ProgressActivity : AppCompatActivity() {
             OperationResult(
                 success = false,
                 message = getString(
-                    R.string.result_failed,
+                    R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
                 )
             )
