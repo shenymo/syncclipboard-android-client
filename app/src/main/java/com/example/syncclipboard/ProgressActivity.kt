@@ -3,6 +3,7 @@ package com.example.syncclipboard
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ContentResolver
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -337,6 +338,23 @@ class ProgressActivity : AppCompatActivity() {
 
         return try {
             val uri = Uri.parse(uriString)
+
+            // 尝试获取文件大小，用于更准确显示上传进度；失败则记为未知大小
+            var totalBytes: Long = -1L
+            if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+                val cursor = contentResolver.query(uri, null, null, null, null)
+                cursor?.use {
+                    if (it.moveToFirst()) {
+                        val index = it.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                        if (index >= 0) {
+                            totalBytes = it.getLong(index)
+                        }
+                    }
+                }
+            }
+
+            val startTime = System.currentTimeMillis()
+
             val input = contentResolver.openInputStream(uri)
                 ?: return OperationResult(
                     success = false,
@@ -348,7 +366,26 @@ class ProgressActivity : AppCompatActivity() {
                 )
 
             input.use { stream ->
-                val result = SyncClipboardApi.uploadFile(config, fileName, stream)
+                val result = SyncClipboardApi.uploadFile(
+                    config,
+                    fileName,
+                    stream,
+                    totalBytes
+                ) { uploaded, total ->
+                    // 上传进度回调：在 UI 线程上更新文案
+                    runOnUiThread {
+                        val elapsedMs = System.currentTimeMillis() - startTime
+                        val elapsedSec = if (elapsedMs <= 0) 1 else elapsedMs / 1000
+                        val speedBytesPerSec = if (elapsedSec <= 0) uploaded else uploaded / elapsedSec
+                        val progressText = buildFileUploadProgressText(
+                            uploadedBytes = uploaded,
+                            totalBytes = total,
+                            speedBytesPerSec = speedBytesPerSec
+                        )
+                        textStatus.text = progressText
+                        textContent.visibility = View.GONE
+                    }
+                }
                 if (result.success) {
                     OperationResult(
                         success = true,
@@ -482,6 +519,17 @@ class ProgressActivity : AppCompatActivity() {
         val total = if (totalBytes > 0) formatSize(totalBytes) else "未知大小"
         val speed = formatSize(speedBytesPerSec) + "/s"
         return "正在下载文件… $downloaded / $total ($speed)"
+    }
+
+    private fun buildFileUploadProgressText(
+        uploadedBytes: Long,
+        totalBytes: Long,
+        speedBytesPerSec: Long
+    ): String {
+        val uploaded = formatSize(uploadedBytes)
+        val total = if (totalBytes > 0) formatSize(totalBytes) else "未知大小"
+        val speed = formatSize(speedBytesPerSec) + "/s"
+        return "正在上传文件… $uploaded / $total ($speed)"
     }
 
     private fun testConnection(config: ServerConfig): OperationResult {

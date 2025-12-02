@@ -157,7 +157,13 @@ object SyncClipboardApi {
      * 1) PUT /file/{fileName} 上传文件内容
      * 2) PUT /SyncClipboard.json 设置 Type = File, File = fileName
      */
-    fun uploadFile(config: ServerConfig, fileName: String, input: InputStream): ApiResult<Unit> {
+    fun uploadFile(
+        config: ServerConfig,
+        fileName: String,
+        input: InputStream,
+        totalBytes: Long = -1L,
+        onProgress: ((uploadedBytes: Long, totalBytes: Long) -> Unit)? = null
+    ): ApiResult<Unit> {
         return try {
             val baseUrl = config.baseUrl.trimEnd('/')
             val fileUrl = URL("$baseUrl/file/$fileName")
@@ -170,7 +176,15 @@ object SyncClipboardApi {
             }
 
             uploadConn.outputStream.use { out ->
-                copyStream(input, out)
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var uploaded = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count <= 0) break
+                    out.write(buffer, 0, count)
+                    uploaded += count
+                    onProgress?.invoke(uploaded, totalBytes)
+                }
             }
 
             val uploadCode = uploadConn.responseCode

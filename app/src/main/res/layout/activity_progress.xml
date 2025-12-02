@@ -1,32 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:foregroundGravity="center"
+    android:padding="0dp">
 
-    <TextView
-        android:id="@+id/textStatus"
+    <!-- 中间的“卡片”作为小对话框内容，父布局全屏，避免透出底层主界面 -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="18sp" />
+        android:layout_gravity="center"
+        android:background="@android:color/background_light"
+        android:elevation="4dp"
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView
-        android:id="@+id/textContent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:maxLines="2"
-        android:ellipsize="end"
-        android:textSize="14sp" />
+        <TextView
+            android:id="@+id/textStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/buttonAction"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/button_start"
-        android:visibility="gone" />
+        <TextView
+            android:id="@+id/textContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textSize="14sp" />
 
-</LinearLayout>
+        <Button
+            android:id="@+id/buttonAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_start"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</FrameLayout>
