@@ -24,22 +24,33 @@ class ProgressActivity : AppCompatActivity() {
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
     private var requireUserTap = false
 
+    private lateinit var textStatus: TextView
+    private lateinit var textContent: TextView
+    private lateinit var buttonAction: Button
+
     /**
      * 简单封装一次操作的结果：
      * - success 表示是否成功
      * - message 为要显示在界面上的文案
+     * - content 为要展示在对话框中的文本内容（上传/下载的剪贴板）
      */
     data class OperationResult(
         val success: Boolean,
-        val message: String
+        val message: String,
+        val content: String? = null
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 使用对话框主题时，允许点击对话框外部区域自动关闭 Activity
+        setFinishOnTouchOutside(true)
+
         setContentView(R.layout.activity_progress)
 
-        val textStatus = findViewById<TextView>(R.id.textStatus)
-        val buttonAction = findViewById<Button>(R.id.buttonAction)
+        textStatus = findViewById(R.id.textStatus)
+        textContent = findViewById(R.id.textContent)
+        buttonAction = findViewById(R.id.buttonAction)
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
 
         textStatus.text = when (operation) {
@@ -66,12 +77,20 @@ class ProgressActivity : AppCompatActivity() {
                     val result = withContext(Dispatchers.IO) {
                         performOperation(OP_UPLOAD_CLIPBOARD)
                     }
+
+                    textStatus.text = result.message
+                    if (!result.content.isNullOrEmpty()) {
+                        textContent.visibility = View.VISIBLE
+                        textContent.text = result.content
+                    } else {
+                        textContent.visibility = View.GONE
+                    }
+
                     Toast.makeText(
                         this@ProgressActivity,
                         result.message,
                         Toast.LENGTH_SHORT
                     ).show()
-                    finishAffinity()
                 }
             }
         } else {
@@ -101,12 +120,19 @@ class ProgressActivity : AppCompatActivity() {
                     performOperation(operation)
                 }
 
+                textStatus.text = result.message
+                if (!result.content.isNullOrEmpty()) {
+                    textContent.visibility = View.VISIBLE
+                    textContent.text = result.content
+                } else {
+                    textContent.visibility = View.GONE
+                }
+
                 Toast.makeText(
                     this@ProgressActivity,
                     result.message,
                     Toast.LENGTH_SHORT
                 ).show()
-                finishAffinity()
             }
         }
     }
@@ -118,7 +144,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     getString(R.string.error_config_missing)
-                )
+                ),
+                content = null
             )
 
         return when (operation) {
@@ -131,7 +158,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     getString(R.string.error_config_missing)
-                )
+                ),
+                content = null
             )
         }
     }
@@ -150,7 +178,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     getString(R.string.error_clipboard_empty)
-                )
+                ),
+                content = null
             )
         }
 
@@ -158,7 +187,8 @@ class ProgressActivity : AppCompatActivity() {
         return if (result.success) {
             OperationResult(
                 success = true,
-                message = getString(R.string.toast_upload_success)
+                message = getString(R.string.toast_upload_success),
+                content = text
             )
         } else {
             OperationResult(
@@ -166,7 +196,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
-                )
+                ),
+                content = text
             )
         }
     }
@@ -179,13 +210,15 @@ class ProgressActivity : AppCompatActivity() {
             clipboardManager.setPrimaryClip(clip)
             OperationResult(
                 success = true,
-                message = getString(R.string.toast_download_success)
+                message = getString(R.string.toast_download_success),
+                content = result.data
             )
         } else {
             val message = result.errorMessage ?: getString(R.string.error_server_not_text)
             OperationResult(
                 success = false,
-                message = getString(R.string.toast_error_prefix, message)
+                message = getString(R.string.toast_error_prefix, message),
+                content = null
             )
         }
     }
@@ -198,14 +231,16 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     getString(R.string.error_clipboard_empty)
-                )
+                ),
+                content = null
             )
         }
         val result = SyncClipboardApi.uploadText(config, sharedText)
         return if (result.success) {
             OperationResult(
                 success = true,
-                message = getString(R.string.toast_upload_success)
+                message = getString(R.string.toast_upload_success),
+                content = sharedText
             )
         } else {
             OperationResult(
@@ -213,7 +248,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
-                )
+                ),
+                content = sharedText
             )
         }
     }
@@ -223,7 +259,8 @@ class ProgressActivity : AppCompatActivity() {
         return if (result.success) {
             OperationResult(
                 success = true,
-                message = getString(R.string.result_success)
+                message = getString(R.string.result_success),
+                content = null
             )
         } else {
             OperationResult(
@@ -231,7 +268,8 @@ class ProgressActivity : AppCompatActivity() {
                 message = getString(
                     R.string.toast_error_prefix,
                     result.errorMessage ?: "未知错误"
-                )
+                ),
+                content = null
             )
         }
     }
