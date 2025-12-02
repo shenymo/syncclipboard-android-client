@@ -50,13 +50,9 @@ class ProgressActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 根据设置选择使用对话框样式还是 BottomSheet 样式
         useBottomSheet = UiStyleStorage.loadProgressStyle(this) == UiStyleStorage.STYLE_BOTTOM_SHEET
-        if (useBottomSheet) {
-            // BottomSheet 使用普通主题，全屏承载，实际界面由 BottomSheetDialog 显示
-            setTheme(R.style.Theme_SyncClipboard)
-        } else {
-            // 对话框样式保持原有主题
-            setTheme(R.style.Theme_SyncClipboard_Dialog)
-        }
+        // 为了保持在视觉上“悬浮在当前应用之上”，两种样式都统一使用对话框主题，
+        // 依赖 Theme.SyncClipboard.Dialog 中的 windowIsTranslucent，让底下原应用内容可见。
+        setTheme(R.style.Theme_SyncClipboard_Dialog)
 
         super.onCreate(savedInstanceState)
 
