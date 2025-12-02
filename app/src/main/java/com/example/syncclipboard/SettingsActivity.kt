@@ -32,6 +32,8 @@ class SettingsActivity : AppCompatActivity() {
         val radioGroupUiStyle = findViewById<RadioGroup>(R.id.radioGroupUiStyle)
         val radioStyleDialog = findViewById<RadioButton>(R.id.radioStyleDialog)
         val radioStyleBottomSheet = findViewById<RadioButton>(R.id.radioStyleBottomSheet)
+        val checkBottomSheetCancelOnTouchOutside =
+            findViewById<android.widget.CheckBox>(R.id.checkBottomSheetCancelOnTouchOutside)
 
         // 读取已有配置
         ConfigStorage.loadConfig(this)?.let { config ->
@@ -46,6 +48,10 @@ class SettingsActivity : AppCompatActivity() {
             else -> radioStyleDialog.isChecked = true
         }
 
+        // 读取 BottomSheet 点击空白处是否关闭的设置
+        checkBottomSheetCancelOnTouchOutside.isChecked =
+            UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
+
         // 切换单选按钮时立即保存样式选择
         radioGroupUiStyle.setOnCheckedChangeListener { _, checkedId ->
             val style = when (checkedId) {
@@ -53,6 +59,11 @@ class SettingsActivity : AppCompatActivity() {
                 else -> UiStyleStorage.STYLE_DIALOG
             }
             UiStyleStorage.saveProgressStyle(this, style)
+        }
+
+        // 勾选/取消勾选时立即保存 BottomSheet 行为设置
+        checkBottomSheetCancelOnTouchOutside.setOnCheckedChangeListener { _, isChecked ->
+            UiStyleStorage.saveBottomSheetCancelOnTouchOutside(this, isChecked)
         }
 
         buttonSave.setOnClickListener {

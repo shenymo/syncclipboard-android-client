@@ -47,4 +47,8 @@
     <string name="settings_ui_style_title">进度界面样式</string>
     <string name="settings_ui_style_dialog">对话框样式</string>
     <string name="settings_ui_style_bottom_sheet">底部弹出样式 (BottomSheet)</string>
+
+    <!-- 设置界面：BottomSheet 点击外部是否关闭 -->
+    <string name="settings_bottom_sheet_behavior_title">BottomSheet 行为</string>
+    <string name="settings_bottom_sheet_cancel_on_touch_outside">点击空白处关闭底部弹窗</string>
 </resources>

@@ -80,6 +80,20 @@
                 android:layout_marginTop="4dp" />
         </RadioGroup>
 
+        <!-- BottomSheet 相关行为设置 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_bottom_sheet_behavior_title"
+            android:layout_marginTop="24dp" />
+
+        <CheckBox
+            android:id="@+id/checkBottomSheetCancelOnTouchOutside"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_bottom_sheet_cancel_on_touch_outside"
+            android:layout_marginTop="8dp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -5,11 +5,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContentResolver
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
-import android.view.Gravity
 import android.widget.Button
 import android.widget.Toast
 import android.widget.TextView
@@ -61,6 +61,12 @@ class ProgressActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // BottomSheet 模式下，尝试对下方当前应用界面做系统级模糊（Android 12+ 才支持）
+        if (useBottomSheet && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // 半径可以根据实际效果调整，这里先给一个中等模糊强度
+            window.setBackgroundBlurRadius(60)
+        }
+
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
 
         if (useBottomSheet) {
@@ -68,8 +74,9 @@ class ProgressActivity : AppCompatActivity() {
             val dialog = BottomSheetDialog(this)
             // 底部弹出时不额外压暗下方界面
             dialog.window?.setDimAmount(0f)
-            // 仅在用户主动下拉（或按返回键）时关闭，避免误触屏幕导致弹窗消失
-            dialog.setCanceledOnTouchOutside(false)
+            // 根据设置决定是否允许点击外部空白区域关闭 BottomSheet
+            val cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
+            dialog.setCanceledOnTouchOutside(cancelOnOutside)
             val view = layoutInflater.inflate(R.layout.activity_progress, null)
             dialog.setContentView(view)
 
@@ -121,11 +128,14 @@ class ProgressActivity : AppCompatActivity() {
                     textStatus.text = result.message
                     textContent.visibility = View.GONE
 
-                    Toast.makeText(
-                        this@ProgressActivity,
-                        result.message,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // 对话框样式下可以额外弹出一条短 Toast；BottomSheet 已在界面内展示结果，无需 Toast
+                    if (!useBottomSheet) {
+                        Toast.makeText(
+                            this@ProgressActivity,
+                            result.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         } else {
@@ -201,16 +211,14 @@ class ProgressActivity : AppCompatActivity() {
                     }
                 }
 
-                val toast = Toast.makeText(
-                    this@ProgressActivity,
-                    result.message,
-                    Toast.LENGTH_SHORT
-                )
-                // BottomSheet 模式下，避免 Toast 挡住底部内容，改为在顶部居中显示
-                if (useBottomSheet) {
-                    toast.setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 100)
+                // 对话框样式下可以弹出 Toast；BottomSheet 模式下不再弹 Toast，避免遮挡底部内容
+                if (!useBottomSheet) {
+                    Toast.makeText(
+                        this@ProgressActivity,
+                        result.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
-                toast.show()
             }
         }
     }
