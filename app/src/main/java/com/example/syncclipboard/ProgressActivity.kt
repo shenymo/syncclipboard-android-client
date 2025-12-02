@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContentResolver
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -60,12 +59,6 @@ class ProgressActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-
-        // BottomSheet 模式下，尝试对下方当前应用界面做系统级模糊（Android 12+ 才支持）
-        if (useBottomSheet && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // 半径可以根据实际效果调整，这里先给一个中等模糊强度
-            window.setBackgroundBlurRadius(60)
-        }
 
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
 

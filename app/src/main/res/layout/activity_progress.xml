@@ -4,7 +4,9 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:gravity="center_horizontal">
+    android:gravity="center_horizontal"
+    android:background="@drawable/bg_progress_sheet"
+    android:elevation="8dp">
 
     <!-- 顶部图标：使用应用图标，并通过 tint 使用主题色（支持莫奈动态配色） -->
     <ImageView
