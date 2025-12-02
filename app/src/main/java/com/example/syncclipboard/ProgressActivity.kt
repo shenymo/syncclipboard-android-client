@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import android.webkit.MimeTypeMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -525,9 +526,10 @@ class ProgressActivity : AppCompatActivity() {
             // 根据是否有同名文件以及用户选择，确定最终要使用的文件名和目标 Uri
             val (targetUri, finalFileName) = if (existingUri == null) {
                 // 无同名文件，直接按原文件名创建新条目
+                val mimeType = guessMimeTypeFromName(fileName) ?: "application/octet-stream"
                 val values = android.content.ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.Downloads.MIME_TYPE, mimeType)
                     put(MediaStore.Downloads.RELATIVE_PATH, "Download")
                 }
                 val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -549,9 +551,10 @@ class ProgressActivity : AppCompatActivity() {
                 } else {
                     // 保留：生成一个不修改后缀的新文件名，例如 "name (2).ext"
                     val newName = generateNonConflictingDownloadName(fileName)
+                    val mimeType = guessMimeTypeFromName(newName) ?: "application/octet-stream"
                     val values = android.content.ContentValues().apply {
                         put(MediaStore.Downloads.DISPLAY_NAME, newName)
-                        put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                        put(MediaStore.Downloads.MIME_TYPE, mimeType)
                         put(MediaStore.Downloads.RELATIVE_PATH, "Download")
                     }
                     val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -570,7 +573,8 @@ class ProgressActivity : AppCompatActivity() {
             contentResolver.openOutputStream(targetUri, "w")?.use { out ->
                 val result = SyncClipboardApi.downloadFileToStream(
                     config,
-                    finalFileName,
+                    // 服务器端始终使用原始文件名 fileName，本地实际保存名可以不同
+                    fileName,
                     out
                 ) { downloaded, total ->
                     // 下载进度回调：在 UI 线程上更新文案
@@ -739,6 +743,16 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     /**
+     * 根据文件名简单推断 MIME 类型，用于下载保存和打开时尽量选择更合适的应用。
+     */
+    private fun guessMimeTypeFromName(name: String): String? {
+        val dot = name.lastIndexOf('.')
+        if (dot <= 0 || dot >= name.length - 1) return null
+        val ext = name.substring(dot + 1).lowercase(java.util.Locale.ROOT)
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+    }
+
+    /**
      * 在 UI 上询问用户对于同名文件是“替换”还是“保留”。
      * 该函数会阻塞当前后台线程，直到用户做出选择。
      */
@@ -789,8 +803,12 @@ class ProgressActivity : AppCompatActivity() {
      */
     private fun openDownloadedFile() {
         val uri = lastDownloadedFileUri ?: return
+        val name = lastDownloadedFileName
+        val resolvedType = contentResolver.getType(uri)
+        val guessedType = if (name != null) guessMimeTypeFromName(name) else null
+        val finalType = resolvedType ?: guessedType ?: "*/*"
         val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "*/*")
+            setDataAndType(uri, finalType)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         try {
