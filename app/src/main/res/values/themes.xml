@@ -28,7 +28,7 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
-        <!-- 不对下方界面增加额外变暗 -->
-        <item name="android:backgroundDimAmount">0.0</item>
+        <!-- 略微压暗下方界面，突出 BottomSheet 内容 -->
+        <item name="android:backgroundDimAmount">0.2</item>
     </style>
 </resources>

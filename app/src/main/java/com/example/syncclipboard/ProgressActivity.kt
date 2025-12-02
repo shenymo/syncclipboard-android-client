@@ -65,8 +65,8 @@ class ProgressActivity : AppCompatActivity() {
         if (useBottomSheet) {
             // 使用 BottomSheet 弹出样式
             val dialog = BottomSheetDialog(this)
-            // 底部弹出时不额外压暗下方界面
-            dialog.window?.setDimAmount(0f)
+            // 略微压暗下方界面（具体强度由主题中的 backgroundDimAmount 控制，这里保持默认）
+            // 可以按需调用 dialog.window?.setDimAmount(0.2f) 进一步覆盖
             // 根据设置决定是否允许点击外部空白区域关闭 BottomSheet
             val cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
             dialog.setCanceledOnTouchOutside(cancelOnOutside)
