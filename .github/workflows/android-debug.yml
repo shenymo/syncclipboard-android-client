@@ -1,8 +1,7 @@
 name: Android Debug APK
 
 on:
-  push:
-    branches: [ main, master ]
+  # 仅手动触发，不在 push 时自动构建
   workflow_dispatch:
 
 jobs:
@@ -32,4 +31,3 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-

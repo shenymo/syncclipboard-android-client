@@ -15,5 +15,20 @@
         <item name="android:windowNoTitle">true</item>
         <!-- 允许看到下方当前应用内容，尽量不打断前台 -->
         <item name="android:windowIsTranslucent">true</item>
+        <!-- 几乎不压暗下方应用界面 -->
+        <item name="android:backgroundDimAmount">0.05</item>
+    </style>
+
+    <!-- 用于 BottomSheet 模式的宿主 Activity：全屏透明，仅承载底部弹窗 -->
+    <style name="Theme.SyncClipboard.BottomSheetHost" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <!-- 窗口本身透明，不显示标题，不单独占据界面 -->
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- 不对下方界面增加额外变暗 -->
+        <item name="android:backgroundDimAmount">0.0</item>
     </style>
 </resources>

@@ -50,9 +50,13 @@ class ProgressActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 根据设置选择使用对话框样式还是 BottomSheet 样式
         useBottomSheet = UiStyleStorage.loadProgressStyle(this) == UiStyleStorage.STYLE_BOTTOM_SHEET
-        // 为了保持在视觉上“悬浮在当前应用之上”，两种样式都统一使用对话框主题，
-        // 依赖 Theme.SyncClipboard.Dialog 中的 windowIsTranslucent，让底下原应用内容可见。
-        setTheme(R.style.Theme_SyncClipboard_Dialog)
+        if (useBottomSheet) {
+            // BottomSheet 模式使用全屏透明宿主 Activity，只承载底部弹窗，不再单独显示对话框窗口。
+            setTheme(R.style.Theme_SyncClipboard_BottomSheetHost)
+        } else {
+            // 对话框模式使用原来的半透明对话框主题。
+            setTheme(R.style.Theme_SyncClipboard_Dialog)
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -61,6 +65,8 @@ class ProgressActivity : AppCompatActivity() {
         if (useBottomSheet) {
             // 使用 BottomSheet 弹出样式
             val dialog = BottomSheetDialog(this)
+            // 底部弹出时不额外压暗下方界面
+            dialog.window?.setDimAmount(0f)
             val view = layoutInflater.inflate(R.layout.activity_progress, null)
             dialog.setContentView(view)
 
