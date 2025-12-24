@@ -11,17 +11,43 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.view.View
-import android.widget.Button
 import android.widget.Toast
-import android.widget.TextView
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import android.webkit.MimeTypeMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.syncclipboard.ui.theme.SyncClipboardTheme
 
 /**
  * 用于在前台执行一次上传/下载/测试操作，并显示进度和结果。
@@ -33,15 +59,15 @@ class ProgressActivity : AppCompatActivity() {
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
     private var requireUserTap = false
     private var useBottomSheet = false
-    private var bottomSheetDialog: BottomSheetDialog? = null
+    private var cancelOnOutside = false
     private var lastDownloadedFileUri: Uri? = null
     private var lastDownloadedFileName: String? = null
 
-    private lateinit var textStatus: TextView
-    private lateinit var textContent: TextView
-    private lateinit var buttonAction: Button
-    private lateinit var buttonReplace: Button
-    private lateinit var buttonKeepBoth: Button
+    private val statusTextState = mutableStateOf("")
+    private val contentTextState = mutableStateOf<String?>(null)
+    private val actionButtonState = mutableStateOf<UiButton?>(null)
+    private val replaceButtonState = mutableStateOf<UiButton?>(null)
+    private val keepBothButtonState = mutableStateOf<UiButton?>(null)
 
     /**
      * 简单封装一次操作的结果：
@@ -55,9 +81,46 @@ class ProgressActivity : AppCompatActivity() {
         val content: String? = null
     )
 
+    private data class UiButton(
+        val text: String,
+        val onClick: () -> Unit
+    )
+
+    private fun setStatusText(text: String) {
+        statusTextState.value = text
+    }
+
+    private fun setContentText(text: String?) {
+        contentTextState.value = text
+    }
+
+    private fun showActionButton(text: String, onClick: () -> Unit) {
+        actionButtonState.value = UiButton(text = text, onClick = onClick)
+    }
+
+    private fun hideActionButton() {
+        actionButtonState.value = null
+    }
+
+    private fun showConflictButtons(
+        replaceText: String,
+        onReplace: () -> Unit,
+        keepBothText: String,
+        onKeepBoth: () -> Unit
+    ) {
+        replaceButtonState.value = UiButton(text = replaceText, onClick = onReplace)
+        keepBothButtonState.value = UiButton(text = keepBothText, onClick = onKeepBoth)
+    }
+
+    private fun hideConflictButtons() {
+        replaceButtonState.value = null
+        keepBothButtonState.value = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 根据设置选择使用对话框样式还是 BottomSheet 样式
         useBottomSheet = UiStyleStorage.loadProgressStyle(this) == UiStyleStorage.STYLE_BOTTOM_SHEET
+        cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
         if (useBottomSheet) {
             // BottomSheet 模式使用全屏透明宿主 Activity，只承载底部弹窗，不再单独显示对话框窗口。
             setTheme(R.style.Theme_SyncClipboard_BottomSheetHost)
@@ -70,59 +133,43 @@ class ProgressActivity : AppCompatActivity() {
 
         val operation = intent.getStringExtra(EXTRA_OPERATION) ?: OP_UPLOAD_CLIPBOARD
 
-        if (useBottomSheet) {
-            // 使用 BottomSheet 弹出样式
-            val dialog = BottomSheetDialog(this)
-            // 略微压暗下方界面（具体强度由主题中的 backgroundDimAmount 控制，这里保持默认）
-            // 可以按需调用 dialog.window?.setDimAmount(0.2f) 进一步覆盖
-            // 根据设置决定是否允许点击外部空白区域关闭 BottomSheet
-            val cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
-            dialog.setCanceledOnTouchOutside(cancelOnOutside)
-            val view = layoutInflater.inflate(R.layout.activity_progress, null)
-            dialog.setContentView(view)
-
-            textStatus = view.findViewById(R.id.textStatus)
-            textContent = view.findViewById(R.id.textContent)
-            buttonAction = view.findViewById(R.id.buttonAction)
-            buttonReplace = view.findViewById(R.id.buttonReplace)
-            buttonKeepBoth = view.findViewById(R.id.buttonKeepBoth)
-
-            dialog.setOnDismissListener {
-                // 底部弹窗关闭时结束 Activity，行为类似对话框
-                finish()
-            }
-            dialog.show()
-            bottomSheetDialog = dialog
-        } else {
-            // 使用对话框主题时，允许点击对话框外部区域自动关闭 Activity
+        if (!useBottomSheet) {
+            // 对话框样式：保持点击空白处关闭的行为
             setFinishOnTouchOutside(true)
+        }
 
-            setContentView(R.layout.activity_progress)
-
-            textStatus = findViewById(R.id.textStatus)
-            textContent = findViewById(R.id.textContent)
-            buttonAction = findViewById(R.id.buttonAction)
-            buttonReplace = findViewById(R.id.buttonReplace)
-            buttonKeepBoth = findViewById(R.id.buttonKeepBoth)
+        setContent {
+            SyncClipboardTheme {
+                ProgressOverlay(
+                    useBottomSheet = useBottomSheet,
+                    cancelOnOutside = cancelOnOutside,
+                    statusText = statusTextState.value,
+                    contentText = contentTextState.value,
+                    actionButton = actionButtonState.value,
+                    replaceButton = replaceButtonState.value,
+                    keepBothButton = keepBothButtonState.value,
+                    onDismissRequest = { finish() }
+                )
+            }
         }
 
         currentOperation = operation
 
         if (operation == OP_UPLOAD_CLIPBOARD) {
             // 上传剪贴板：上传前不显示内容预览，只在按钮下方显示结果文字
-            textStatus.text = ""
+            setStatusText("")
+            setContentText(null)
             // 上传本机剪贴板必须由用户在本应用内点击触发，
             // 否则 Android 会认为是后台读剪贴板而拒绝访问。
             requireUserTap = true
-            buttonAction.visibility = View.VISIBLE
-            buttonAction.text = getString(R.string.button_start)
-            buttonAction.setOnClickListener {
-                if (started) return@setOnClickListener
+            showActionButton(text = getString(R.string.button_start), onClick = onStartUpload@{
+                if (started) return@onStartUpload
                 started = true
 
                 // 点击上传后，不再显示按钮，改为显示上传进度文字
-                buttonAction.visibility = View.GONE
-                textStatus.text = getString(R.string.progress_upload_clipboard)
+                hideActionButton()
+                setStatusText(getString(R.string.progress_upload_clipboard))
+                setContentText(null)
 
                 lifecycleScope.launch {
                     val result = withContext(Dispatchers.IO) {
@@ -130,8 +177,8 @@ class ProgressActivity : AppCompatActivity() {
                     }
 
                     // 上传完成后只显示结果文字，不展示剪贴板内容
-                    textStatus.text = result.message
-                    textContent.visibility = View.GONE
+                    setStatusText(result.message)
+                    setContentText(null)
 
                     // 对话框样式下可以额外弹出一条短 Toast；BottomSheet 已在界面内展示结果，无需 Toast
                     if (!useBottomSheet) {
@@ -142,25 +189,25 @@ class ProgressActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
-            }
+            })
         } else {
-            textStatus.text = when (operation) {
+            setStatusText(
+                when (operation) {
                 OP_DOWNLOAD_CLIPBOARD -> getString(R.string.progress_download_clipboard)
                 OP_UPLOAD_SHARED_TEXT -> getString(R.string.progress_upload_shared)
                 OP_UPLOAD_FILE -> getString(R.string.progress_upload_file)
                 OP_TEST_CONNECTION -> getString(R.string.progress_test_connection)
                 else -> getString(R.string.progress_upload_clipboard)
-            }
+                }
+            )
             // 下载剪贴板 / 分享上传 / 测试连接 不需要访问本机剪贴板，
             // 可以在 onResume 中自动执行。
             requireUserTap = false
-            buttonAction.visibility = View.GONE
+            hideActionButton()
         }
     }
 
     override fun onDestroy() {
-        bottomSheetDialog?.dismiss()
-        bottomSheetDialog = null
         super.onDestroy()
     }
 
@@ -183,57 +230,41 @@ class ProgressActivity : AppCompatActivity() {
                     performOperation(operation)
                 }
 
+                hideConflictButtons()
+
                 // 下载剪贴板 / 文件：根据结果显示“已写入剪贴板”或“文件已下载”等文案
                 if (operation == OP_DOWNLOAD_CLIPBOARD) {
                     if (result.success) {
                         // 如果存在 lastDownloadedFileUri，说明本次是“文件下载”场景
                         if (lastDownloadedFileUri != null) {
                             // 标题显示“已保存至 路径…”
-                            textStatus.text = result.message
+                            setStatusText(result.message)
                             // 内容区域只展示文件名
                             val fileName = lastDownloadedFileName ?: result.content ?: ""
-                            if (fileName.isNotEmpty()) {
-                                textContent.visibility = View.VISIBLE
-                                textContent.text = fileName
-                            } else {
-                                textContent.visibility = View.GONE
-                            }
+                            setContentText(fileName.ifEmpty { null })
                             // 显示“打开”按钮，点击后调用系统根据类型选择可打开的应用
-                            buttonAction.visibility = View.VISIBLE
-                            buttonAction.text = getString(R.string.button_open_file)
-                            buttonAction.setOnClickListener {
+                            showActionButton(text = getString(R.string.button_open_file)) {
                                 openDownloadedFile()
                             }
                         } else {
                             // 文本剪贴板下载：沿用原有显示逻辑
-                            textStatus.text = result.message
-                            if (!result.content.isNullOrEmpty()) {
-                                textContent.visibility = View.VISIBLE
-                                textContent.text = result.content
-                            } else {
-                                textContent.visibility = View.GONE
-                            }
-                            buttonAction.visibility = View.GONE
+                            setStatusText(result.message)
+                            setContentText(result.content?.takeIf { it.isNotEmpty() })
+                            hideActionButton()
                         }
                     } else {
-                        textStatus.text = getString(R.string.dialog_download_failed_title)
-                        textContent.visibility = View.VISIBLE
-                        textContent.text = result.message
-                        buttonAction.visibility = View.GONE
+                        setStatusText(getString(R.string.dialog_download_failed_title))
+                        setContentText(result.message)
+                        hideActionButton()
                     }
                 } else {
                     // 分享上传 / 测试连接：沿用通用文案，显示结果和内容
                     // 上传剪贴板则只显示结果，不显示内容
-                    textStatus.text = result.message
+                    setStatusText(result.message)
                     if (operation == OP_UPLOAD_CLIPBOARD) {
-                        textContent.visibility = View.GONE
+                        setContentText(null)
                     } else {
-                        if (!result.content.isNullOrEmpty()) {
-                            textContent.visibility = View.VISIBLE
-                            textContent.text = result.content
-                        } else {
-                            textContent.visibility = View.GONE
-                        }
+                        setContentText(result.content?.takeIf { it.isNotEmpty() })
                     }
                 }
 
@@ -417,8 +448,8 @@ class ProgressActivity : AppCompatActivity() {
 
             // 步骤 1：在 UI 上提示“准备上传文件”
             runOnUiThread {
-                textStatus.text = "正在准备上传文件…"
-                textContent.visibility = View.GONE
+                setStatusText("正在准备上传文件…")
+                setContentText(null)
             }
 
             // 尝试获取文件大小，用于更准确显示上传进度；失败则记为未知大小
@@ -464,15 +495,15 @@ class ProgressActivity : AppCompatActivity() {
                             totalBytes = total,
                             speedBytesPerSec = speedBytesPerSec
                         )
-                        textStatus.text = progressText
-                        textContent.visibility = View.GONE
+                        setStatusText(progressText)
+                        setContentText(null)
                     }
                 }
                 if (result.success) {
                     // 步骤 3：文件上传完毕，正在等待服务器确认剪贴板状态更新
                     runOnUiThread {
-                        textStatus.text = "上传完成，正在更新服务器状态…"
-                        textContent.visibility = View.GONE
+                        setStatusText("上传完成，正在更新服务器状态…")
+                        setContentText(null)
                     }
                     OperationResult(
                         success = true,
@@ -511,8 +542,8 @@ class ProgressActivity : AppCompatActivity() {
 
             // 步骤 1：在 UI 上提示正在准备下载文件
             runOnUiThread {
-                textStatus.text = "正在准备下载文件…"
-                textContent.visibility = View.GONE
+                setStatusText("正在准备下载文件…")
+                setContentText(null)
             }
 
             // 下载目录绝对路径，用于提示“已保存至 …”
@@ -587,8 +618,8 @@ class ProgressActivity : AppCompatActivity() {
                             totalBytes = total,
                             speedBytesPerSec = speedBytesPerSec
                         )
-                        textStatus.text = progressText
-                        textContent.visibility = View.GONE
+                        setStatusText(progressText)
+                        setContentText(null)
                     }
                 }
                 if (!result.success) {
@@ -762,26 +793,23 @@ class ProgressActivity : AppCompatActivity() {
 
         runOnUiThread {
             // 标题显示文件名，正文询问是否保留已存在的同名文件
-            textStatus.text = fileName
-            textContent.visibility = View.VISIBLE
-            textContent.text = getString(R.string.file_conflict_message)
+            setStatusText(fileName)
+            setContentText(getString(R.string.file_conflict_message))
 
             // 显示“替换”和“保留”两个按钮，隐藏单一操作按钮
-            buttonAction.visibility = View.GONE
-            buttonReplace.visibility = View.VISIBLE
-            buttonKeepBoth.visibility = View.VISIBLE
-
-            buttonReplace.text = getString(R.string.button_replace)
-            buttonKeepBoth.text = getString(R.string.button_keep_both)
-
-            buttonReplace.setOnClickListener {
+            hideActionButton()
+            showConflictButtons(
+                replaceText = getString(R.string.button_replace),
+                onReplace = {
                 decision = FileConflictDecision.REPLACE
                 latch.countDown()
-            }
-            buttonKeepBoth.setOnClickListener {
+                },
+                keepBothText = getString(R.string.button_keep_both),
+                onKeepBoth = {
                 decision = FileConflictDecision.KEEP_BOTH
                 latch.countDown()
-            }
+                }
+            )
         }
 
         try {
@@ -791,8 +819,7 @@ class ProgressActivity : AppCompatActivity() {
 
         // 用户已选择，隐藏两个按钮，避免影响后续界面
         runOnUiThread {
-            buttonReplace.visibility = View.GONE
-            buttonKeepBoth.visibility = View.GONE
+            hideConflictButtons()
         }
 
         return decision
@@ -819,6 +846,109 @@ class ProgressActivity : AppCompatActivity() {
                 "没有可用于打开该文件的应用",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    @Composable
+    private fun ProgressOverlay(
+        useBottomSheet: Boolean,
+        cancelOnOutside: Boolean,
+        statusText: String,
+        contentText: String?,
+        actionButton: UiButton?,
+        replaceButton: UiButton?,
+        keepBothButton: UiButton?,
+        onDismissRequest: () -> Unit
+    ) {
+        val scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)
+        val sheetAlignment = if (useBottomSheet) Alignment.BottomCenter else Alignment.Center
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            val dismissOnScrimTap = !useBottomSheet || cancelOnOutside
+            val scrimModifier =
+                if (dismissOnScrimTap) {
+                    Modifier
+                        .fillMaxSize()
+                        .background(scrimColor)
+                        .clickable(onClick = onDismissRequest)
+                } else {
+                    Modifier
+                        .fillMaxSize()
+                        .background(scrimColor)
+                }
+            Box(modifier = scrimModifier)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                contentAlignment = sheetAlignment
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp)),
+                    tonalElevation = 6.dp,
+                    shadowElevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher),
+                            contentDescription = getString(R.string.app_name),
+                            modifier = Modifier.size(40.dp)
+                        )
+
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        if (!contentText.isNullOrEmpty()) {
+                            Text(
+                                text = contentText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(0.dp))
+                        }
+
+                        if (actionButton != null) {
+                            Button(onClick = actionButton.onClick) {
+                                Text(text = actionButton.text)
+                            }
+                        }
+
+                        if (replaceButton != null || keepBothButton != null) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (replaceButton != null) {
+                                    Button(onClick = replaceButton.onClick) {
+                                        Text(text = replaceButton.text)
+                                    }
+                                }
+                                if (keepBothButton != null) {
+                                    OutlinedButton(onClick = keepBothButton.onClick) {
+                                        Text(text = keepBothButton.text)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

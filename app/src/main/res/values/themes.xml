@@ -1,29 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.SyncClipboard" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorAccent">@color/teal_200</item>
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+    <style name="Theme.SyncClipboard" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
     </style>
 
     <!-- 用于 ProgressActivity 的对话框样式主题：小窗口悬浮在当前前台内容之上 -->
-    <style name="Theme.SyncClipboard.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorAccent">@color/teal_200</item>
+    <style name="Theme.SyncClipboard.Dialog" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <!-- 允许看到下方当前应用内容，尽量不打断前台 -->
         <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
         <!-- 几乎不压暗下方应用界面 -->
         <item name="android:backgroundDimAmount">0.05</item>
     </style>
 
     <!-- 用于 BottomSheet 模式的宿主 Activity：全屏透明，仅承载底部弹窗 -->
-    <style name="Theme.SyncClipboard.BottomSheetHost" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorAccent">@color/teal_200</item>
+    <style name="Theme.SyncClipboard.BottomSheetHost" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- 窗口本身透明，不显示标题，不单独占据界面 -->
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsTranslucent">true</item>

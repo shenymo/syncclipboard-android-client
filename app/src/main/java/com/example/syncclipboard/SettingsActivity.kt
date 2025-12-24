@@ -1,13 +1,48 @@
 package com.example.syncclipboard
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
-import android.widget.RadioGroup
-import android.widget.RadioButton
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import com.example.syncclipboard.ui.theme.SyncClipboardTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -18,94 +53,238 @@ import kotlinx.coroutines.withContext
  * - 保存到 SharedPreferences
  * - “测试连接”按钮调用服务器 /SyncClipboard.json
  */
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-
-        val editBaseUrl = findViewById<EditText>(R.id.editBaseUrl)
-        val editUsername = findViewById<EditText>(R.id.editUsername)
-        val editToken = findViewById<EditText>(R.id.editToken)
-        val buttonSave = findViewById<Button>(R.id.buttonSave)
-        val buttonTest = findViewById<Button>(R.id.buttonTest)
-        val radioGroupUiStyle = findViewById<RadioGroup>(R.id.radioGroupUiStyle)
-        val radioStyleDialog = findViewById<RadioButton>(R.id.radioStyleDialog)
-        val radioStyleBottomSheet = findViewById<RadioButton>(R.id.radioStyleBottomSheet)
-        val checkBottomSheetCancelOnTouchOutside =
-            findViewById<android.widget.CheckBox>(R.id.checkBottomSheetCancelOnTouchOutside)
-
-        // 读取已有配置
-        ConfigStorage.loadConfig(this)?.let { config ->
-            editBaseUrl.setText(config.baseUrl)
-            editUsername.setText(config.username)
-            editToken.setText(config.token)
-        }
-
-        // 读取并应用当前进度界面样式设置
-        when (UiStyleStorage.loadProgressStyle(this)) {
-            UiStyleStorage.STYLE_BOTTOM_SHEET -> radioStyleBottomSheet.isChecked = true
-            else -> radioStyleDialog.isChecked = true
-        }
-
-        // 读取 BottomSheet 点击空白处是否关闭的设置
-        checkBottomSheetCancelOnTouchOutside.isChecked =
-            UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
-
-        // 切换单选按钮时立即保存样式选择
-        radioGroupUiStyle.setOnCheckedChangeListener { _, checkedId ->
-            val style = when (checkedId) {
-                R.id.radioStyleBottomSheet -> UiStyleStorage.STYLE_BOTTOM_SHEET
-                else -> UiStyleStorage.STYLE_DIALOG
+        setContent {
+            SyncClipboardTheme {
+                SettingsScreen()
             }
-            UiStyleStorage.saveProgressStyle(this, style)
         }
+    }
+}
 
-        // 勾选/取消勾选时立即保存 BottomSheet 行为设置
-        checkBottomSheetCancelOnTouchOutside.setOnCheckedChangeListener { _, isChecked ->
-            UiStyleStorage.saveBottomSheetCancelOnTouchOutside(this, isChecked)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen() {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    var baseUrl by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
+    var token by rememberSaveable { mutableStateOf("") }
+
+    var progressUiStyle by rememberSaveable { mutableStateOf(UiStyleStorage.STYLE_DIALOG) }
+    var bottomSheetCancelOnTouchOutside by rememberSaveable { mutableStateOf(false) }
+
+    var isTesting by remember { mutableStateOf(false) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        ConfigStorage.loadConfig(context)?.let { config ->
+            baseUrl = config.baseUrl
+            username = config.username
+            token = config.token
         }
+        progressUiStyle = UiStyleStorage.loadProgressStyle(context)
+        bottomSheetCancelOnTouchOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(context)
+    }
 
-        buttonSave.setOnClickListener {
-            val baseUrl = editBaseUrl.text.toString().trim()
-            val username = editUsername.text.toString().trim()
-            val token = editToken.text.toString().trim()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(id = R.string.settings_title)) }
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.label_base_url),
+                style = MaterialTheme.typography.labelLarge
+            )
+            TextField(
+                value = baseUrl,
+                onValueChange = { baseUrl = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "例如：http://192.168.5.194:5033") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                singleLine = true
+            )
 
-            if (baseUrl.isEmpty() || username.isEmpty() || token.isEmpty()) {
-                Toast.makeText(this, getString(R.string.error_config_missing), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            Text(
+                text = stringResource(id = R.string.label_username),
+                style = MaterialTheme.typography.labelLarge
+            )
+            TextField(
+                value = username,
+                onValueChange = { username = it },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                singleLine = true
+            )
+
+            Text(
+                text = stringResource(id = R.string.label_token),
+                style = MaterialTheme.typography.labelLarge
+            )
+            TextField(
+                value = token,
+                onValueChange = { token = it },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+
+            Text(
+                text = stringResource(id = R.string.settings_ui_style_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SettingRadioRow(
+                    selected = progressUiStyle == UiStyleStorage.STYLE_DIALOG,
+                    text = stringResource(id = R.string.settings_ui_style_dialog),
+                    onClick = {
+                        progressUiStyle = UiStyleStorage.STYLE_DIALOG
+                        UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_DIALOG)
+                    }
+                )
+                SettingRadioRow(
+                    selected = progressUiStyle == UiStyleStorage.STYLE_BOTTOM_SHEET,
+                    text = stringResource(id = R.string.settings_ui_style_bottom_sheet),
+                    onClick = {
+                        progressUiStyle = UiStyleStorage.STYLE_BOTTOM_SHEET
+                        UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_BOTTOM_SHEET)
+                    }
+                )
             }
 
-            val config = ServerConfig(baseUrl, username, token)
-            ConfigStorage.saveConfig(this, config)
-            Toast.makeText(this, "配置已保存", Toast.LENGTH_SHORT).show()
-        }
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
 
-        buttonTest.setOnClickListener {
-            val baseUrl = editBaseUrl.text.toString().trim()
-            val username = editUsername.text.toString().trim()
-            val token = editToken.text.toString().trim()
-
-            if (baseUrl.isEmpty() || username.isEmpty() || token.isEmpty()) {
-                Toast.makeText(this, getString(R.string.error_config_missing), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            Text(
+                text = stringResource(id = R.string.settings_bottom_sheet_behavior_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        bottomSheetCancelOnTouchOutside = !bottomSheetCancelOnTouchOutside
+                        UiStyleStorage.saveBottomSheetCancelOnTouchOutside(
+                            context,
+                            bottomSheetCancelOnTouchOutside
+                        )
+                    }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = bottomSheetCancelOnTouchOutside,
+                    onCheckedChange = { checked ->
+                        bottomSheetCancelOnTouchOutside = checked
+                        UiStyleStorage.saveBottomSheetCancelOnTouchOutside(context, checked)
+                    }
+                )
+                Text(text = stringResource(id = R.string.settings_bottom_sheet_cancel_on_touch_outside))
             }
 
-            val config = ServerConfig(baseUrl, username, token)
-            lifecycleScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    SyncClipboardApi.testConnection(config)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = {
+                        val trimmedBaseUrl = baseUrl.trim()
+                        val trimmedUsername = username.trim()
+                        val trimmedToken = token.trim()
+                        if (trimmedBaseUrl.isEmpty() || trimmedUsername.isEmpty() || trimmedToken.isEmpty()) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.error_config_missing)
+                                )
+                            }
+                            return@Button
+                        }
+                        ConfigStorage.saveConfig(
+                            context,
+                            ServerConfig(trimmedBaseUrl, trimmedUsername, trimmedToken)
+                        )
+                        scope.launch { snackbarHostState.showSnackbar(message = "配置已保存") }
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.button_save))
                 }
-                if (result.success) {
-                    Toast.makeText(this@SettingsActivity, "连接成功", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(
-                        this@SettingsActivity,
-                        "连接失败: ${result.errorMessage ?: "未知错误"}",
-                        Toast.LENGTH_LONG
-                    ).show()
+
+                OutlinedButton(
+                    onClick = {
+                        if (isTesting) return@OutlinedButton
+                        val trimmedBaseUrl = baseUrl.trim()
+                        val trimmedUsername = username.trim()
+                        val trimmedToken = token.trim()
+                        if (trimmedBaseUrl.isEmpty() || trimmedUsername.isEmpty() || trimmedToken.isEmpty()) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.error_config_missing)
+                                )
+                            }
+                            return@OutlinedButton
+                        }
+
+                        val config = ServerConfig(trimmedBaseUrl, trimmedUsername, trimmedToken)
+                        scope.launch {
+                            isTesting = true
+                            val result = withContext(Dispatchers.IO) {
+                                SyncClipboardApi.testConnection(config)
+                            }
+                            isTesting = false
+                            if (result.success) {
+                                snackbarHostState.showSnackbar(message = "连接成功")
+                            } else {
+                                snackbarHostState.showSnackbar(
+                                    message = "连接失败: ${result.errorMessage ?: "未知错误"}"
+                                )
+                            }
+                        }
+                    },
+                    enabled = !isTesting
+                ) {
+                    Text(text = stringResource(id = R.string.button_test_connection))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingRadioRow(
+    selected: Boolean,
+    text: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(text = text)
     }
 }
