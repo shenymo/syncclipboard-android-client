@@ -361,14 +361,24 @@ class ProgressActivity : AppCompatActivity() {
         }
 
         val profile = profileResult.data
+        val normalizedType = profile.type.trim().lowercase(java.util.Locale.ROOT)
+
         // 优先根据 File 字段判断是否为文件模式：只要服务器返回了 File 名，就按文件处理，
         // 避免 Type 值不规范（例如 Image、自定义字符串）导致误判。
-        if (!profile.file.isNullOrEmpty()) {
-            return downloadFileToDownloadDir(config, profile.file)
+        val fileNameFromFileField = profile.file?.trim()?.takeIf { it.isNotEmpty() }
+        if (fileNameFromFileField != null) {
+            return downloadFileToDownloadDir(config, fileNameFromFileField)
         }
 
-        // 其次再看 Text 模式
-        if (profile.type == "Text") {
+        // 兼容部分服务端把文件名塞到 Clipboard 字段的情况（尤其是 Type=File 但 File=""）
+        val fileNameFromClipboardField =
+            if (normalizedType == "file") profile.clipboard?.trim()?.takeIf { it.isNotEmpty() } else null
+        if (fileNameFromClipboardField != null) {
+            return downloadFileToDownloadDir(config, fileNameFromClipboardField)
+        }
+
+        // 其次再看 Text 模式（兼容大小写）
+        if (normalizedType == "text") {
             val text = profile.clipboard ?: ""
             if (text.isEmpty()) {
                 return OperationResult(

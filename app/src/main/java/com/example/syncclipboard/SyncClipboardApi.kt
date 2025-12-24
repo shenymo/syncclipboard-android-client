@@ -143,8 +143,8 @@ object SyncClipboardApi {
     }
 
     fun testConnection(config: ServerConfig): ApiResult<Unit> {
-        // 直接调用 downloadText，只要能正常返回 JSON 就认为连接成功
-        val result = downloadText(config)
+        // 只要能正常返回 JSON（无论当前是 Text 还是 File）就认为连接成功
+        val result = getClipboardProfile(config)
         return if (result.success) {
             ApiResult(success = true)
         } else {

@@ -1,6 +1,8 @@
-apply plugin: "com.android.application"
-apply plugin: "kotlin-android"
-apply plugin: "org.jetbrains.kotlin.plugin.compose"
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+    id "org.jetbrains.kotlin.plugin.compose"
+}
 
 android {
     namespace "com.example.syncclipboard"
@@ -41,7 +43,9 @@ android {
             if (hasReleaseSigningConfig) {
                 signingConfig signingConfigs.release
             }
-            minifyEnabled false
+            // Release 体积优化：开启 R8 压缩/混淆 + 资源裁剪（Compose 未压缩时体积会明显增大）
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
         debug {
@@ -60,8 +64,6 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
-
     implementation "androidx.core:core-ktx:1.13.1"
     implementation "androidx.appcompat:appcompat:1.7.0"
     implementation "com.google.android.material:material:1.12.0"
