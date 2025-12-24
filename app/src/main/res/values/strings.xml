@@ -47,6 +47,10 @@
     <string name="settings_ui_style_title">进度界面样式</string>
     <string name="settings_ui_style_dialog">对话框样式</string>
     <string name="settings_ui_style_bottom_sheet">底部弹出样式 (BottomSheet)</string>
+    <string name="settings_ui_style_floating_window">悬浮窗样式</string>
+    <string name="settings_overlay_permission_required">需要授予“在其他应用上层显示”权限后才能使用悬浮窗。</string>
+    <string name="button_grant_overlay_permission">授予悬浮窗权限</string>
+    <string name="floating_window_drag_hint">拖动此处移动悬浮窗</string>
 
     <!-- 设置界面：BottomSheet 点击外部是否关闭 -->
     <string name="settings_bottom_sheet_behavior_title">BottomSheet 行为</string>

@@ -23,4 +23,12 @@
         <!-- 略微压暗下方界面，突出 BottomSheet 内容 -->
         <item name="android:backgroundDimAmount">0.2</item>
     </style>
+
+    <!-- 用于 悬浮窗 模式的宿主 Activity：全屏透明、不接管触摸，仅用于保持前台态 -->
+    <style name="Theme.SyncClipboard.FloatingHost" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimAmount">0.0</item>
+    </style>
 </resources>

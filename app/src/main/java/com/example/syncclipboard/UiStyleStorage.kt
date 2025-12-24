@@ -15,6 +15,7 @@ object UiStyleStorage {
 
     const val STYLE_DIALOG = "dialog"
     const val STYLE_BOTTOM_SHEET = "bottom_sheet"
+    const val STYLE_FLOATING_WINDOW = "floating_window"
 
     fun saveProgressStyle(context: Context, style: String) {
         val sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

@@ -5,13 +5,18 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContentResolver
 import android.content.ContentUris
-import android.content.Intent
 import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.provider.Settings
 import android.provider.MediaStore
+import android.view.Gravity
+import android.view.WindowManager
 import android.widget.Toast
+import android.graphics.drawable.ColorDrawable
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,28 +31,43 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.ComposeView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import android.webkit.MimeTypeMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.syncclipboard.ui.theme.SyncClipboardTheme
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import java.util.Locale
 
 /**
  * 用于在前台执行一次上传/下载/测试操作，并显示进度和结果。
@@ -59,9 +79,11 @@ class ProgressActivity : AppCompatActivity() {
     private var currentOperation: String = OP_UPLOAD_CLIPBOARD
     private var requireUserTap = false
     private var useBottomSheet = false
+    private var useFloatingWindow = false
     private var cancelOnOutside = false
     private var lastDownloadedFileUri: Uri? = null
     private var lastDownloadedFileName: String? = null
+    private var overlayController: FloatingOverlayController? = null
 
     private val statusTextState = mutableStateOf("")
     private val contentTextState = mutableStateOf<String?>(null)
@@ -118,10 +140,14 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 根据设置选择使用对话框样式还是 BottomSheet 样式
-        useBottomSheet = UiStyleStorage.loadProgressStyle(this) == UiStyleStorage.STYLE_BOTTOM_SHEET
+        val progressStyle = UiStyleStorage.loadProgressStyle(this)
+        // 根据设置选择使用对话框样式 / BottomSheet / 悬浮窗
+        useBottomSheet = progressStyle == UiStyleStorage.STYLE_BOTTOM_SHEET
+        useFloatingWindow = progressStyle == UiStyleStorage.STYLE_FLOATING_WINDOW
         cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
-        if (useBottomSheet) {
+        if (useFloatingWindow) {
+            setTheme(R.style.Theme_SyncClipboard_FloatingHost)
+        } else if (useBottomSheet) {
             // BottomSheet 模式使用全屏透明宿主 Activity，只承载底部弹窗，不再单独显示对话框窗口。
             setTheme(R.style.Theme_SyncClipboard_BottomSheetHost)
         } else {
@@ -138,18 +164,80 @@ class ProgressActivity : AppCompatActivity() {
             setFinishOnTouchOutside(true)
         }
 
-        setContent {
-            SyncClipboardTheme {
-                ProgressOverlay(
-                    useBottomSheet = useBottomSheet,
-                    cancelOnOutside = cancelOnOutside,
-                    statusText = statusTextState.value,
-                    contentText = contentTextState.value,
-                    actionButton = actionButtonState.value,
-                    replaceButton = replaceButtonState.value,
-                    keepBothButton = keepBothButtonState.value,
-                    onDismissRequest = { finish() }
-                )
+        if (useFloatingWindow) {
+            if (!Settings.canDrawOverlays(this)) {
+                setContent {
+                    SyncClipboardTheme {
+                        OverlayPermissionScreen(
+                            onGrantPermission = { openOverlayPermissionSettings() },
+                            onUseInApp = {
+                                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_DIALOG)
+                                recreate()
+                            }
+                        )
+                    }
+                }
+                return
+            }
+
+            try {
+                // 保持 Activity 处于前台，但不接管触摸：触摸交给悬浮窗与底层应用
+                window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+                // 确保不压暗底层界面
+                window.setDimAmount(0f)
+                window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+                overlayController = FloatingOverlayController(this).also { controller ->
+                    controller.show(
+                        statusTextState = statusTextState,
+                        contentTextState = contentTextState,
+                        actionButtonState = actionButtonState,
+                        replaceButtonState = replaceButtonState,
+                        keepBothButtonState = keepBothButtonState,
+                        onClose = { finish() }
+                    )
+                }
+
+                setContent { SyncClipboardTheme { Box(modifier = Modifier.fillMaxSize()) } }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this,
+                    "悬浮窗创建失败，将回退到应用内界面：${e.message ?: e.javaClass.simpleName}",
+                    Toast.LENGTH_LONG
+                ).show()
+                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_DIALOG)
+                useFloatingWindow = false
+                useBottomSheet = false
+                setContent {
+                    SyncClipboardTheme {
+                        ProgressOverlay(
+                            useBottomSheet = false,
+                            cancelOnOutside = false,
+                            statusText = statusTextState.value,
+                            contentText = contentTextState.value,
+                            actionButton = actionButtonState.value,
+                            replaceButton = replaceButtonState.value,
+                            keepBothButton = keepBothButtonState.value,
+                            onDismissRequest = { finish() }
+                        )
+                    }
+                }
+            }
+        } else {
+            setContent {
+                SyncClipboardTheme {
+                    ProgressOverlay(
+                        useBottomSheet = useBottomSheet,
+                        cancelOnOutside = cancelOnOutside,
+                        statusText = statusTextState.value,
+                        contentText = contentTextState.value,
+                        actionButton = actionButtonState.value,
+                        replaceButton = replaceButtonState.value,
+                        keepBothButton = keepBothButtonState.value,
+                        onDismissRequest = { finish() }
+                    )
+                }
             }
         }
 
@@ -208,6 +296,8 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        overlayController?.hide()
+        overlayController = null
         super.onDestroy()
     }
 
@@ -361,7 +451,7 @@ class ProgressActivity : AppCompatActivity() {
         }
 
         val profile = profileResult.data
-        val normalizedType = profile.type.trim().lowercase(java.util.Locale.ROOT)
+        val normalizedType = profile.type.trim().lowercase(Locale.ROOT)
 
         // 优先根据 File 字段判断是否为文件模式：只要服务器返回了 File 名，就按文件处理，
         // 避免 Type 值不规范（例如 Image、自定义字符串）导致误判。
@@ -789,7 +879,7 @@ class ProgressActivity : AppCompatActivity() {
     private fun guessMimeTypeFromName(name: String): String? {
         val dot = name.lastIndexOf('.')
         if (dot <= 0 || dot >= name.length - 1) return null
-        val ext = name.substring(dot + 1).lowercase(java.util.Locale.ROOT)
+        val ext = name.substring(dot + 1).lowercase(Locale.ROOT)
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
     }
 
@@ -953,6 +1043,237 @@ class ProgressActivity : AppCompatActivity() {
                                     OutlinedButton(onClick = keepBothButton.onClick) {
                                         Text(text = keepBothButton.text)
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun openOverlayPermissionSettings() {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        startActivity(intent)
+    }
+
+    @Composable
+    private fun OverlayPermissionScreen(
+        onGrantPermission: () -> Unit,
+        onUseInApp: () -> Unit
+    ) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = getString(R.string.settings_overlay_permission_required),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Button(onClick = onGrantPermission) {
+                    Text(text = getString(R.string.button_grant_overlay_permission))
+                }
+                OutlinedButton(onClick = onUseInApp) {
+                    Text(text = getString(R.string.settings_ui_style_dialog))
+                }
+            }
+        }
+    }
+
+    private class FloatingOverlayController(
+        private val activity: ProgressActivity
+    ) {
+        private val windowManager =
+            activity.getSystemService(WINDOW_SERVICE) as WindowManager
+        private var view: ComposeView? = null
+        private var params: WindowManager.LayoutParams? = null
+
+        fun show(
+            statusTextState: androidx.compose.runtime.State<String>,
+            contentTextState: androidx.compose.runtime.State<String?>,
+            actionButtonState: androidx.compose.runtime.State<UiButton?>,
+            replaceButtonState: androidx.compose.runtime.State<UiButton?>,
+            keepBothButtonState: androidx.compose.runtime.State<UiButton?>,
+            onClose: () -> Unit
+        ) {
+            if (view != null) return
+
+            val overlayParams = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 0
+                y = 120
+            }
+
+            val composeView = ComposeView(activity).apply {
+                setViewTreeLifecycleOwner(activity)
+                setViewTreeViewModelStoreOwner(activity)
+                setViewTreeSavedStateRegistryOwner(activity)
+                setContent {
+                    val statusText by rememberUpdatedState(statusTextState.value)
+                    val contentText by rememberUpdatedState(contentTextState.value)
+                    val actionButton by rememberUpdatedState(actionButtonState.value)
+                    val replaceButton by rememberUpdatedState(replaceButtonState.value)
+                    val keepBothButton by rememberUpdatedState(keepBothButtonState.value)
+                    val closeHandler by rememberUpdatedState(onClose)
+                    val moveHandler = remember {
+                        { dx: Float, dy: Float -> moveBy(dx, dy) }
+                    }
+
+                    SyncClipboardTheme {
+                        FloatingProgressCard(
+                            statusText = statusText,
+                            contentText = contentText,
+                            actionButton = actionButton,
+                            replaceButton = replaceButton,
+                            keepBothButton = keepBothButton,
+                            onMoveBy = moveHandler,
+                            onClose = closeHandler
+                        )
+                    }
+                }
+            }
+
+            windowManager.addView(composeView, overlayParams)
+            view = composeView
+            params = overlayParams
+        }
+
+        fun hide() {
+            val current = view ?: return
+            view = null
+            params = null
+            try {
+                windowManager.removeView(current)
+            } catch (_: Exception) {
+            }
+        }
+
+        private fun moveBy(dx: Float, dy: Float) {
+            val currentView = view ?: return
+            val currentParams = params ?: return
+            currentParams.x = (currentParams.x + dx.toInt()).coerceAtLeast(0)
+            currentParams.y = (currentParams.y + dy.toInt()).coerceAtLeast(0)
+            try {
+                windowManager.updateViewLayout(currentView, currentParams)
+            } catch (_: Exception) {
+            }
+        }
+
+        @Composable
+        private fun FloatingProgressCard(
+            statusText: String,
+            contentText: String?,
+            actionButton: UiButton?,
+            replaceButton: UiButton?,
+            keepBothButton: UiButton?,
+            onMoveBy: (dx: Float, dy: Float) -> Unit,
+            onClose: () -> Unit
+        ) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 240.dp, max = 360.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                tonalElevation = 6.dp,
+                shadowElevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = activity.getString(R.string.app_name),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        IconButton(onClick = onClose) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInput(Unit) {
+                                detectDragGestures { _, dragAmount ->
+                                    onMoveBy(dragAmount.x, dragAmount.y)
+                                }
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = activity.getString(R.string.floating_window_drag_hint),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (!contentText.isNullOrEmpty()) {
+                        Text(
+                            text = contentText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    if (actionButton != null) {
+                        Button(
+                            onClick = actionButton.onClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = actionButton.text)
+                        }
+                    }
+
+                    if (replaceButton != null || keepBothButton != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (replaceButton != null) {
+                                Button(
+                                    onClick = replaceButton.onClick,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = replaceButton.text)
+                                }
+                            }
+                            if (keepBothButton != null) {
+                                OutlinedButton(
+                                    onClick = keepBothButton.onClick,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = keepBothButton.text)
                                 }
                             }
                         }

@@ -1,6 +1,8 @@
 package com.example.syncclipboard
 
 import android.os.Bundle
+import android.provider.Settings
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -30,6 +32,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +84,7 @@ private fun SettingsScreen() {
     var isTesting by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val currentContext by rememberUpdatedState(context)
     LaunchedEffect(Unit) {
         ConfigStorage.loadConfig(context)?.let { config ->
             baseUrl = config.baseUrl
@@ -89,6 +93,15 @@ private fun SettingsScreen() {
         }
         progressUiStyle = UiStyleStorage.loadProgressStyle(context)
         bottomSheetCancelOnTouchOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(context)
+    }
+
+    fun openOverlayPermissionSettings() {
+        val intent = android.content.Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${currentContext.packageName}")
+        )
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        currentContext.startActivity(intent)
     }
 
     Scaffold(
@@ -167,6 +180,22 @@ private fun SettingsScreen() {
                     onClick = {
                         progressUiStyle = UiStyleStorage.STYLE_BOTTOM_SHEET
                         UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_BOTTOM_SHEET)
+                    }
+                )
+                SettingRadioRow(
+                    selected = progressUiStyle == UiStyleStorage.STYLE_FLOATING_WINDOW,
+                    text = stringResource(id = R.string.settings_ui_style_floating_window),
+                    onClick = {
+                        progressUiStyle = UiStyleStorage.STYLE_FLOATING_WINDOW
+                        UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_FLOATING_WINDOW)
+                        if (!Settings.canDrawOverlays(context)) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.settings_overlay_permission_required)
+                                )
+                            }
+                            openOverlayPermissionSettings()
+                        }
                     }
                 )
             }
