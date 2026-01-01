@@ -1,14 +1,13 @@
 package com.example.syncclipboard
 
-import android.Manifest
 import android.content.ContentResolver
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.provider.Settings
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
@@ -16,7 +15,7 @@ import androidx.core.content.ContextCompat
  * 系统分享入口：
  * - 接收 text/plain 作为文本上传
  * - 接收文件/图片（EXTRA_STREAM）作为文件上传
- * - 立即启动 ProgressActivity 显示上传进度和结果，然后结束自己。
+ * - 立即启动 FloatingOverlayService 显示悬浮窗进度，然后结束自己。
  */
 class ShareReceiveActivity : AppCompatActivity() {
 
@@ -39,70 +38,53 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     private fun handleSendText() {
         val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        val style = UiStyleStorage.loadProgressStyle(this)
-        val canNotify =
-            style == UiStyleStorage.STYLE_NOTIFICATION &&
-                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
-
-        if (canNotify) {
-            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
-                action = NotificationProgressService.ACTION_UPLOAD_TEXT
-                putExtra(NotificationProgressService.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
-                putExtra(NotificationProgressService.EXTRA_TEXT, sharedText)
-            }
-            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
-        } else if (style == UiStyleStorage.STYLE_FLOATING_WINDOW) {
-            val intent = Intent(this, FloatingOverlayService::class.java).apply {
-                action = FloatingOverlayService.ACTION_UPLOAD_TEXT
-                putExtra(FloatingOverlayService.EXTRA_TEXT, sharedText)
-            }
-            androidx.core.content.ContextCompat.startForegroundService(this, intent)
-        } else {
-            val progressIntent = Intent(this, ProgressActivity::class.java).apply {
-                putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
-                putExtra(ProgressActivity.EXTRA_SHARED_TEXT, sharedText)
-                // 在独立任务中显示对话框，避免唤起设置主界面
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(progressIntent)
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(
+                this,
+                getString(R.string.settings_overlay_permission_required),
+                Toast.LENGTH_SHORT
+            ).show()
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            return
         }
+
+        val intent = Intent(this, FloatingOverlayService::class.java).apply {
+            action = FloatingOverlayService.ACTION_UPLOAD_TEXT
+            putExtra(FloatingOverlayService.EXTRA_TEXT, sharedText)
+        }
+        ContextCompat.startForegroundService(this, intent)
     }
 
     private fun handleSendFile() {
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: return
         val fileName = resolveFileName(uri) ?: uri.lastPathSegment ?: "shared_file"
 
-        val style = UiStyleStorage.loadProgressStyle(this)
-        val canNotify =
-            style == UiStyleStorage.STYLE_NOTIFICATION &&
-                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
-
-        if (canNotify) {
-            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
-                action = NotificationProgressService.ACTION_UPLOAD_FILE
-                putExtra(NotificationProgressService.EXTRA_FILE_URI, uri.toString())
-                putExtra(NotificationProgressService.EXTRA_FILE_NAME, fileName)
-            }
-            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
-        } else if (style == UiStyleStorage.STYLE_FLOATING_WINDOW) {
-            val intent = Intent(this, FloatingOverlayService::class.java).apply {
-                action = FloatingOverlayService.ACTION_UPLOAD_FILE
-                putExtra(FloatingOverlayService.EXTRA_FILE_URI, uri.toString())
-                putExtra(FloatingOverlayService.EXTRA_FILE_NAME, fileName)
-            }
-            androidx.core.content.ContextCompat.startForegroundService(this, intent)
-        } else {
-            val progressIntent = Intent(this, ProgressActivity::class.java).apply {
-                putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_FILE)
-                putExtra(ProgressActivity.EXTRA_FILE_URI, uri.toString())
-                putExtra(ProgressActivity.EXTRA_FILE_NAME, fileName)
-                // 在独立任务中显示对话框，避免唤起设置主界面
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(progressIntent)
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(
+                this,
+                getString(R.string.settings_overlay_permission_required),
+                Toast.LENGTH_SHORT
+            ).show()
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            return
         }
+
+        val intent = Intent(this, FloatingOverlayService::class.java).apply {
+            action = FloatingOverlayService.ACTION_UPLOAD_FILE
+            putExtra(FloatingOverlayService.EXTRA_FILE_URI, uri.toString())
+            putExtra(FloatingOverlayService.EXTRA_FILE_NAME, fileName)
+        }
+        ContextCompat.startForegroundService(this, intent)
     }
 
     private fun resolveFileName(uri: Uri): String? {

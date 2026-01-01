@@ -167,18 +167,17 @@ class ProgressActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val progressStyle = UiStyleStorage.loadProgressStyle(this)
-        // 根据设置选择使用对话框样式 / BottomSheet / 悬浮窗
-        useBottomSheet = progressStyle == UiStyleStorage.STYLE_BOTTOM_SHEET
+        // 根据设置选择使用 BottomSheet / 悬浮窗
+        useBottomSheet =
+            progressStyle == UiStyleStorage.STYLE_BOTTOM_SHEET ||
+                progressStyle == UiStyleStorage.STYLE_NOTIFICATION
         useFloatingWindow = progressStyle == UiStyleStorage.STYLE_FLOATING_WINDOW
         cancelOnOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(this)
         if (useFloatingWindow) {
             setTheme(R.style.Theme_SyncClipboard_FloatingHost)
-        } else if (useBottomSheet) {
-            // BottomSheet 模式使用全屏透明宿主 Activity，只承载底部弹窗，不再单独显示对话框窗口。
-            setTheme(R.style.Theme_SyncClipboard_BottomSheetHost)
         } else {
-            // 对话框模式使用原来的半透明对话框主题。
-            setTheme(R.style.Theme_SyncClipboard_Dialog)
+            // BottomSheet 模式使用全屏透明宿主 Activity，只承载底部弹窗。
+            setTheme(R.style.Theme_SyncClipboard_BottomSheetHost)
         }
 
         super.onCreate(savedInstanceState)
@@ -197,7 +196,7 @@ class ProgressActivity : AppCompatActivity() {
                         OverlayPermissionScreen(
                             onGrantPermission = { openOverlayPermissionSettings() },
                             onUseInApp = {
-                                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_DIALOG)
+                                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_BOTTOM_SHEET)
                                 recreate()
                             }
                         )
@@ -206,6 +205,7 @@ class ProgressActivity : AppCompatActivity() {
                 return
             }
 
+            val originalParams = WindowManager.LayoutParams().apply { copyFrom(window.attributes) }
             try {
                 // 保持 Activity 处于前台，但不接管触摸：触摸交给悬浮窗与底层应用
                 // 将 Activity 窗口最小化，防止全屏透明遮罩阻挡点击
@@ -242,14 +242,17 @@ class ProgressActivity : AppCompatActivity() {
                     "悬浮窗创建失败，将回退到应用内界面：${e.message ?: e.javaClass.simpleName}",
                     Toast.LENGTH_LONG
                 ).show()
-                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_DIALOG)
+                UiStyleStorage.saveProgressStyle(this, UiStyleStorage.STYLE_BOTTOM_SHEET)
                 useFloatingWindow = false
-                useBottomSheet = false
+                useBottomSheet = true
+                window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+                window.attributes = originalParams
                 setContent {
                     SyncClipboardTheme {
                         ProgressOverlay(
-                            useBottomSheet = false,
-                            cancelOnOutside = false,
+                            useBottomSheet = true,
+                            cancelOnOutside = cancelOnOutside,
                             statusText = statusTextState.value,
                             contentText = contentTextState.value,
                             actionButton = actionButtonState.value,
@@ -1202,7 +1205,7 @@ class ProgressActivity : AppCompatActivity() {
                     Text(text = getString(R.string.button_grant_overlay_permission))
                 }
                 OutlinedButton(onClick = onUseInApp) {
-                    Text(text = getString(R.string.settings_ui_style_dialog))
+                    Text(text = getString(R.string.settings_ui_style_bottom_sheet))
                 }
             }
         }

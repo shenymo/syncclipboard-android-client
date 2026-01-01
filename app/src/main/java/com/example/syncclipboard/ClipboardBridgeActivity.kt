@@ -3,6 +3,7 @@ package com.example.syncclipboard
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -27,44 +28,22 @@ class ClipboardBridgeActivity : AppCompatActivity() {
 
         mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_UPLOAD
 
-        if (mode == MODE_NOTIFICATION_PREPARE_UPLOAD) {
+        if (!Settings.canDrawOverlays(this)) {
             handled = true
-            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
-                action = NotificationProgressService.ACTION_PREPARE_UPLOAD_CLIPBOARD
-            }
-            ContextCompat.startForegroundService(this, serviceIntent)
-            finish()
-            overridePendingTransition(0, 0)
-            return
-        }
-
-        if (mode == MODE_NOTIFICATION_DOWNLOAD) {
-            handled = true
-            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
-                action = NotificationProgressService.ACTION_DOWNLOAD_CLIPBOARD
-            }
-            ContextCompat.startForegroundService(this, serviceIntent)
-            finish()
-            overridePendingTransition(0, 0)
-            return
-        }
-
-        if (mode == MODE_DOWNLOAD || mode == MODE_UPLOAD) {
-            if (!Settings.canDrawOverlays(this)) {
-            // 回退到应用内界面，引导用户授予悬浮窗权限
-            val operation =
-                if (mode == MODE_DOWNLOAD) ProgressActivity.OP_DOWNLOAD_CLIPBOARD
-                else ProgressActivity.OP_UPLOAD_CLIPBOARD
+            Toast.makeText(
+                this,
+                getString(R.string.settings_overlay_permission_required),
+                Toast.LENGTH_SHORT
+            ).show()
             startActivity(
-                Intent(this, ProgressActivity::class.java).apply {
-                    putExtra(ProgressActivity.EXTRA_OPERATION, operation)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
             finish()
             overridePendingTransition(0, 0)
             return
-        }
         }
 
         if (mode == MODE_DOWNLOAD) {
@@ -82,7 +61,7 @@ class ClipboardBridgeActivity : AppCompatActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus || handled) return
-        if (mode != MODE_UPLOAD && mode != MODE_NOTIFICATION_UPLOAD_EXECUTE) return
+        if (mode != MODE_UPLOAD) return
         handled = true
 
         // 等到窗口真正获得焦点后再读剪贴板，避免系统判定“应用不在前台/无焦点”而拒绝。
@@ -106,20 +85,11 @@ class ClipboardBridgeActivity : AppCompatActivity() {
                 return@post
             }
 
-            if (mode == MODE_NOTIFICATION_UPLOAD_EXECUTE) {
-                val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
-                    action = NotificationProgressService.ACTION_UPLOAD_TEXT
-                    putExtra(NotificationProgressService.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_CLIPBOARD)
-                    putExtra(NotificationProgressService.EXTRA_TEXT, text)
-                }
-                ContextCompat.startForegroundService(this, serviceIntent)
-            } else {
-                val intent = Intent(this, FloatingOverlayService::class.java).apply {
-                    action = FloatingOverlayService.ACTION_UPLOAD_TEXT
-                    putExtra(FloatingOverlayService.EXTRA_TEXT, text)
-                }
-                ContextCompat.startForegroundService(this, intent)
+            val intent = Intent(this, FloatingOverlayService::class.java).apply {
+                action = FloatingOverlayService.ACTION_UPLOAD_TEXT
+                putExtra(FloatingOverlayService.EXTRA_TEXT, text)
             }
+            ContextCompat.startForegroundService(this, intent)
 
             finish()
             overridePendingTransition(0, 0)
@@ -130,8 +100,5 @@ class ClipboardBridgeActivity : AppCompatActivity() {
         const val EXTRA_MODE = "bridge_mode"
         const val MODE_UPLOAD = "upload"
         const val MODE_DOWNLOAD = "download"
-        const val MODE_NOTIFICATION_PREPARE_UPLOAD = "notification_prepare_upload"
-        const val MODE_NOTIFICATION_UPLOAD_EXECUTE = "notification_upload_execute"
-        const val MODE_NOTIFICATION_DOWNLOAD = "notification_download"
     }
 }
