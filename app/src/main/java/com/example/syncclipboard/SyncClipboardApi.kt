@@ -9,6 +9,11 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * 与 SyncClipboard 服务交互的最简 API：
@@ -24,6 +29,10 @@ object SyncClipboardApi {
 
     private const val CONNECT_TIMEOUT_MS = 5_000
     private const val READ_TIMEOUT_MS = 15_000
+    private const val CALL_TIMEOUT_MS = 25_000L
+    private const val FILE_CALL_TIMEOUT_MS = 5 * 60_000L
+
+    private val executor = Executors.newCachedThreadPool()
 
     /**
      * /SyncClipboard.json 返回的完整信息，用于区分 Text / File 等类型。
@@ -60,112 +69,145 @@ object SyncClipboardApi {
         runCatching { disconnect() }
     }
 
-    fun uploadText(config: ServerConfig, text: String): ApiResult<Unit> {
-        var conn: HttpURLConnection? = null
+    private fun <T> callWithTimeout(
+        timeoutMs: Long,
+        createConnection: () -> HttpURLConnection,
+        block: (HttpURLConnection) -> ApiResult<T>
+    ): ApiResult<T> {
+        val connRef = AtomicReference<HttpURLConnection?>(null)
+        val future = executor.submit<ApiResult<T>> {
+            val conn = createConnection()
+            connRef.set(conn)
+            try {
+                block(conn)
+            } finally {
+                conn.closeQuietly()
+            }
+        }
+
         return try {
-            val url = URL(buildApiUrl(config))
-            conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "PUT"
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                applyCommonConfig(config)
-            }
+            future.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            connRef.get()?.closeQuietly()
+            future.cancel(true)
+            ApiResult(success = false, errorMessage = "网络请求超时")
+        } catch (e: ExecutionException) {
+            throw (e.cause ?: e)
+        }
+    }
 
-            val body = JSONObject().apply {
-                put("File", "")
-                put("Clipboard", text)
-                put("Type", "Text")
-            }.toString()
+    fun uploadText(config: ServerConfig, text: String): ApiResult<Unit> {
+        return try {
+            callWithTimeout(
+                timeoutMs = CALL_TIMEOUT_MS,
+                createConnection = {
+                    val url = URL(buildApiUrl(config))
+                    (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "PUT"
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        applyCommonConfig(config)
+                    }
+                }
+            ) { conn ->
+                val body = JSONObject().apply {
+                    put("File", "")
+                    put("Clipboard", text)
+                    put("Type", "Text")
+                }.toString()
 
-            OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { writer ->
-                writer.write(body)
-            }
+                OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { writer ->
+                    writer.write(body)
+                }
 
-            val code = conn.responseCode
-            if (code in 200..299) {
-                ApiResult(success = true)
-            } else {
-                val message = readStreamAsString(conn.errorStream)
-                    ?: "${conn.responseCode} ${conn.responseMessage}"
-                ApiResult(success = false, errorMessage = message)
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    ApiResult(success = true)
+                } else {
+                    val message = readStreamAsString(conn.errorStream)
+                        ?: "${conn.responseCode} ${conn.responseMessage}"
+                    ApiResult(success = false, errorMessage = message)
+                }
             }
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
-        } finally {
-            conn?.closeQuietly()
         }
     }
 
     /**
      * 获取当前服务器端剪贴板完整 Profile（Type / Clipboard / File）。
      */
-    fun getClipboardProfile(config: ServerConfig): ApiResult<ClipboardProfile> {
-        var conn: HttpURLConnection? = null
+    fun getClipboardProfile(config: ServerConfig, timeoutMs: Long = CALL_TIMEOUT_MS): ApiResult<ClipboardProfile> {
         return try {
-            val url = URL(buildApiUrl(config))
-            conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                applyCommonConfig(config)
-            }
+            callWithTimeout(
+                timeoutMs = timeoutMs,
+                createConnection = {
+                    val url = URL(buildApiUrl(config))
+                    (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        applyCommonConfig(config)
+                    }
+                }
+            ) { conn ->
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    val message = readStreamAsString(conn.errorStream)
+                        ?: "${conn.responseCode} ${conn.responseMessage}"
+                    return@callWithTimeout ApiResult(success = false, errorMessage = message)
+                }
 
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                val message = readStreamAsString(conn.errorStream)
-                    ?: "${conn.responseCode} ${conn.responseMessage}"
-                return ApiResult(success = false, errorMessage = message)
-            }
-
-            val text = readStreamAsString(conn.inputStream) ?: ""
-            val json = JSONObject(text)
-            val type = json.optString("Type", "")
-            val clipboard = json.optString("Clipboard", null)
-            val file = json.optString("File", null)
-            ApiResult(
-                success = true,
-                data = ClipboardProfile(
-                    type = type,
-                    clipboard = clipboard,
-                    file = file
+                val text = readStreamAsString(conn.inputStream) ?: ""
+                val json = JSONObject(text)
+                val type = json.optString("Type", "")
+                val clipboard = json.optString("Clipboard", null)
+                val file = json.optString("File", null)
+                ApiResult(
+                    success = true,
+                    data = ClipboardProfile(
+                        type = type,
+                        clipboard = clipboard,
+                        file = file
+                    )
                 )
-            )
+            }
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
-        } finally {
-            conn?.closeQuietly()
         }
     }
 
     fun downloadText(config: ServerConfig): ApiResult<String> {
-        var conn: HttpURLConnection? = null
         return try {
-            val url = URL(buildApiUrl(config))
-            conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                applyCommonConfig(config)
-            }
+            callWithTimeout(
+                timeoutMs = CALL_TIMEOUT_MS,
+                createConnection = {
+                    val url = URL(buildApiUrl(config))
+                    (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        applyCommonConfig(config)
+                    }
+                }
+            ) { conn ->
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    val message = readStreamAsString(conn.errorStream)
+                        ?: "${conn.responseCode} ${conn.responseMessage}"
+                    return@callWithTimeout ApiResult(success = false, errorMessage = message)
+                }
 
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                val message = readStreamAsString(conn.errorStream)
-                    ?: "${conn.responseCode} ${conn.responseMessage}"
-                return ApiResult(success = false, errorMessage = message)
+                val text = readStreamAsString(conn.inputStream) ?: ""
+                val json = JSONObject(text)
+                val type = json.optString("Type", "")
+                if (type != "Text") {
+                    return@callWithTimeout ApiResult(success = false, errorMessage = "服务器当前剪贴板不是 Text 类型")
+                }
+                val clipboard = json.optString("Clipboard", "")
+                if (clipboard.isEmpty()) {
+                    return@callWithTimeout ApiResult(success = false, errorMessage = "服务器返回的剪贴板内容为空")
+                }
+                ApiResult(success = true, data = clipboard)
             }
-
-            val text = readStreamAsString(conn.inputStream) ?: ""
-            val json = JSONObject(text)
-            val type = json.optString("Type", "")
-            if (type != "Text") {
-                return ApiResult(success = false, errorMessage = "服务器当前剪贴板不是 Text 类型")
-            }
-            val clipboard = json.optString("Clipboard", "")
-            if (clipboard.isEmpty()) {
-                return ApiResult(success = false, errorMessage = "服务器返回的剪贴板内容为空")
-            }
-            ApiResult(success = true, data = clipboard)
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
-        } finally {
-            conn?.closeQuietly()
         }
     }
 
@@ -189,73 +231,88 @@ object SyncClipboardApi {
         fileName: String,
         input: InputStream,
         totalBytes: Long = -1L,
+        onStage: ((UploadFileStage) -> Unit)? = null,
         onProgress: ((uploadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): ApiResult<Unit> {
-        var uploadConn: HttpURLConnection? = null
-        var syncConn: HttpURLConnection? = null
         return try {
-            val baseUrl = config.baseUrl.trimEnd('/')
-            val fileUrl = URL("$baseUrl/file/$fileName")
-
-            // 第一步：上传文件内容
-            uploadConn = (fileUrl.openConnection() as HttpURLConnection).apply {
-                requestMethod = "PUT"
-                doOutput = true
-                applyCommonConfig(config)
-            }
-
-            uploadConn.outputStream.use { out ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var uploaded = 0L
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count <= 0) break
-                    out.write(buffer, 0, count)
-                    uploaded += count
-                    onProgress?.invoke(uploaded, totalBytes)
+            // 文件上传可能耗时较长：单独设置更大的总超时，避免“卡死无反馈”
+            callWithTimeout(
+                timeoutMs = FILE_CALL_TIMEOUT_MS,
+                createConnection = {
+                    val baseUrl = config.baseUrl.trimEnd('/')
+                    val fileUrl = URL("$baseUrl/file/$fileName")
+                    (fileUrl.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "PUT"
+                        doOutput = true
+                        applyCommonConfig(config)
+                    }
                 }
-            }
+            ) { uploadConn ->
+                onStage?.invoke(UploadFileStage.UPLOADING_CONTENT)
+                uploadConn.outputStream.use { out ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var uploaded = 0L
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count <= 0) break
+                        out.write(buffer, 0, count)
+                        uploaded += count
+                        onProgress?.invoke(uploaded, totalBytes)
+                    }
+                }
 
-            val uploadCode = uploadConn.responseCode
-            if (uploadCode !in 200..299) {
-                val message = readStreamAsString(uploadConn.errorStream)
-                    ?: "${uploadConn.responseCode} ${uploadConn.responseMessage}"
-                return ApiResult(success = false, errorMessage = message)
-            }
+                onStage?.invoke(UploadFileStage.WAITING_UPLOAD_RESPONSE)
+                val uploadCode = uploadConn.responseCode
+                if (uploadCode !in 200..299) {
+                    val message = readStreamAsString(uploadConn.errorStream)
+                        ?: "${uploadConn.responseCode} ${uploadConn.responseMessage}"
+                    return@callWithTimeout ApiResult(success = false, errorMessage = message)
+                }
 
-            // 第二步：更新 SyncClipboard.json 为 File 类型
-            val syncUrl = URL(buildApiUrl(config))
-            syncConn = (syncUrl.openConnection() as HttpURLConnection).apply {
-                requestMethod = "PUT"
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                applyCommonConfig(config)
-            }
+                // 第二步：更新 SyncClipboard.json 为 File 类型
+                onStage?.invoke(UploadFileStage.UPDATING_PROFILE)
+                val syncUrl = URL(buildApiUrl(config))
+                val syncConn = (syncUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "PUT"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    applyCommonConfig(config)
+                }
 
-            val body = JSONObject().apply {
-                put("File", fileName)
-                put("Clipboard", "")
-                put("Type", "File")
-            }.toString()
+                return@callWithTimeout try {
+                    val body = JSONObject().apply {
+                        put("File", fileName)
+                        put("Clipboard", "")
+                        put("Type", "File")
+                    }.toString()
 
-            OutputStreamWriter(syncConn.outputStream, Charsets.UTF_8).use { writer ->
-                writer.write(body)
-            }
+                    OutputStreamWriter(syncConn.outputStream, Charsets.UTF_8).use { writer ->
+                        writer.write(body)
+                    }
 
-            val syncCode = syncConn.responseCode
-            if (syncCode in 200..299) {
-                ApiResult(success = true)
-            } else {
-                val message = readStreamAsString(syncConn.errorStream)
-                    ?: "${syncConn.responseCode} ${syncConn.responseMessage}"
-                ApiResult(success = false, errorMessage = message)
+                    val syncCode = syncConn.responseCode
+                    if (syncCode in 200..299) {
+                        onStage?.invoke(UploadFileStage.DONE)
+                        ApiResult(success = true)
+                    } else {
+                        val message = readStreamAsString(syncConn.errorStream)
+                            ?: "${syncConn.responseCode} ${syncConn.responseMessage}"
+                        ApiResult(success = false, errorMessage = message)
+                    }
+                } finally {
+                    syncConn.closeQuietly()
+                }
             }
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
-        } finally {
-            uploadConn?.closeQuietly()
-            syncConn?.closeQuietly()
         }
+    }
+
+    enum class UploadFileStage {
+        UPLOADING_CONTENT,
+        WAITING_UPLOAD_RESPONSE,
+        UPDATING_PROFILE,
+        DONE
     }
 
     /**

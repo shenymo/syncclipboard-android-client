@@ -72,6 +72,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.syncclipboard.ui.theme.SyncClipboardTheme
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.os.Looper
 import java.util.Locale
 
 /**
@@ -116,11 +117,23 @@ class ProgressActivity : AppCompatActivity() {
     )
 
     private fun setStatusText(text: String) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread { setStatusText(text) }
+            return
+        }
         statusTextState.value = text
+        // 悬浮窗模式下强制刷新窗口内容，确保进度能实时更新（避免部分 ROM 下重组不触发）
+        overlayController?.refresh()
     }
 
     private fun setContentText(text: String?) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread { setContentText(text) }
+            return
+        }
         contentTextState.value = text
+        // 悬浮窗模式下强制刷新窗口内容，确保进度能实时更新（避免部分 ROM 下重组不触发）
+        overlayController?.refresh()
     }
 
     private fun previewForOverlay(raw: String, maxChars: Int = 80): String {
@@ -495,22 +508,38 @@ class ProgressActivity : AppCompatActivity() {
         }
 
         val result = SyncClipboardApi.uploadText(config, text)
-        return if (result.success) {
-            OperationResult(
+        if (result.success) {
+            return OperationResult(
                 success = true,
                 message = getString(R.string.toast_upload_success),
                 content = text
             )
-        } else {
-            OperationResult(
-                success = false,
-                message = getString(
-                    R.string.toast_error_prefix,
-                    result.errorMessage ?: "未知错误"
-                ),
-                content = text
-            )
         }
+
+        val errorMessage = result.errorMessage ?: "未知错误"
+        // 兼容：请求已到达服务器但客户端等待响应超时的情况，尝试二次确认服务器状态
+        if (errorMessage == "网络请求超时") {
+            runOnUiThread { setStatusText("正在确认服务器状态…") }
+            val confirmed = runCatching {
+                val profile = SyncClipboardApi.getClipboardProfile(config, timeoutMs = 8_000)
+                profile.success &&
+                    profile.data?.type?.trim()?.lowercase(Locale.ROOT) == "text" &&
+                    (profile.data?.clipboard ?: "") == text
+            }.getOrNull() == true
+            if (confirmed) {
+                return OperationResult(
+                    success = true,
+                    message = getString(R.string.toast_upload_success),
+                    content = text
+                )
+            }
+        }
+
+        return OperationResult(
+            success = false,
+            message = getString(R.string.toast_error_prefix, errorMessage),
+            content = text
+        )
     }
 
     private fun downloadClipboard(config: ServerConfig): OperationResult {
@@ -1186,6 +1215,15 @@ class ProgressActivity : AppCompatActivity() {
             activity.getSystemService(WINDOW_SERVICE) as WindowManager
         private var view: ComposeView? = null
         private var params: WindowManager.LayoutParams? = null
+        private var contentOperation: String = OP_UPLOAD_CLIPBOARD
+        private var contentStatusTextState: androidx.compose.runtime.State<String>? = null
+        private var contentTextState: androidx.compose.runtime.State<String?>? = null
+        private var contentIsSuccessState: androidx.compose.runtime.State<Boolean>? = null
+        private var contentIsErrorState: androidx.compose.runtime.State<Boolean>? = null
+        private var contentActionButtonState: androidx.compose.runtime.State<UiButton?>? = null
+        private var contentReplaceButtonState: androidx.compose.runtime.State<UiButton?>? = null
+        private var contentKeepBothButtonState: androidx.compose.runtime.State<UiButton?>? = null
+        private var contentOnClose: (() -> Unit)? = null
 
         fun show(
             operation: String,
@@ -1199,6 +1237,16 @@ class ProgressActivity : AppCompatActivity() {
             onClose: () -> Unit
         ) {
             if (view != null) return
+
+            contentOperation = operation
+            contentStatusTextState = statusTextState
+            this.contentTextState = contentTextState
+            contentIsSuccessState = isSuccessState
+            contentIsErrorState = isErrorState
+            contentActionButtonState = actionButtonState
+            contentReplaceButtonState = replaceButtonState
+            contentKeepBothButtonState = keepBothButtonState
+            contentOnClose = onClose
 
             // Default: NOT_FOCUSABLE (allows click-through to app behind)
             // We will temporarily remove this flag when reading clipboard.
@@ -1230,44 +1278,56 @@ class ProgressActivity : AppCompatActivity() {
                         false
                     }
                 }
-                setContent {
-                    val statusText by rememberUpdatedState(statusTextState.value)
-                    val contentText by rememberUpdatedState(contentTextState.value)
-                    val isSuccess by rememberUpdatedState(isSuccessState.value)
-                    val isError by rememberUpdatedState(isErrorState.value)
-                    val actionButton by rememberUpdatedState(actionButtonState.value)
-                    val replaceButton by rememberUpdatedState(replaceButtonState.value)
-                    val keepBothButton by rememberUpdatedState(keepBothButtonState.value)
-                    val closeHandler by rememberUpdatedState(onClose)
-                    val moveHandler = remember {
-                        { dx: Float, dy: Float -> moveBy(dx, dy) }
-                    }
-
-                    val longPressSeconds = remember {
-                        UiStyleStorage.loadLongPressCloseSeconds(activity)
-                    }
-
-                    SyncClipboardTheme {
-                        FloatingProgressCard(
-                            operation = operation,
-                            statusText = statusText,
-                            contentText = contentText,
-                            isSuccess = isSuccess,
-                            isError = isError,
-                            actionButton = actionButton,
-                            replaceButton = replaceButton,
-                            keepBothButton = keepBothButton,
-                            longPressSeconds = longPressSeconds,
-                            onMoveBy = moveHandler,
-                            onClose = closeHandler
-                        )
-                    }
-                }
             }
 
             windowManager.addView(composeView, overlayParams)
             view = composeView
             params = overlayParams
+            refresh()
+        }
+
+        fun refresh() {
+            if (Looper.myLooper() != Looper.getMainLooper()) {
+                activity.runOnUiThread { refresh() }
+                return
+            }
+            val currentView = view ?: return
+            val statusTextState = contentStatusTextState ?: return
+            val contentTextState = this.contentTextState ?: return
+            val isSuccessState = contentIsSuccessState ?: return
+            val isErrorState = contentIsErrorState ?: return
+            val actionButtonState = contentActionButtonState ?: return
+            val replaceButtonState = contentReplaceButtonState ?: return
+            val keepBothButtonState = contentKeepBothButtonState ?: return
+            val closeHandler = contentOnClose ?: return
+            val operation = contentOperation
+
+            // 强制重设 content，确保窗口内 UI 能刷新进度（部分 ROM/窗口组合下重组可能不触发）
+            currentView.setContent {
+                val moveHandler = remember {
+                    { dx: Float, dy: Float -> moveBy(dx, dy) }
+                }
+
+                val longPressSeconds = remember {
+                    UiStyleStorage.loadLongPressCloseSeconds(activity)
+                }
+
+                SyncClipboardTheme {
+                    FloatingProgressCard(
+                        operation = operation,
+                        statusText = statusTextState.value,
+                        contentText = contentTextState.value,
+                        isSuccess = isSuccessState.value,
+                        isError = isErrorState.value,
+                        actionButton = actionButtonState.value,
+                        replaceButton = replaceButtonState.value,
+                        keepBothButton = keepBothButtonState.value,
+                        longPressSeconds = longPressSeconds,
+                        onMoveBy = moveHandler,
+                        onClose = closeHandler
+                    )
+                }
+            }
         }
 
         fun setFocusable(focusable: Boolean) {
@@ -1288,6 +1348,14 @@ class ProgressActivity : AppCompatActivity() {
             val current = view ?: return
             view = null
             params = null
+            contentOnClose = null
+            contentStatusTextState = null
+            contentTextState = null
+            contentIsSuccessState = null
+            contentIsErrorState = null
+            contentActionButtonState = null
+            contentReplaceButtonState = null
+            contentKeepBothButtonState = null
             try {
                 windowManager.removeView(current)
             } catch (_: Exception) {

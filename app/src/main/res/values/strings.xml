@@ -65,6 +65,7 @@
     <string name="file_conflict_message">目标目录中已存在同名文件，是否保留已存在的同名文件？</string>
     <string name="button_replace">替换</string>
     <string name="button_keep_both">保留</string>
+    <string name="button_rename_save">重命名保存</string>
 
     <!-- 通知样式：操作按钮 -->
     <string name="notification_action_start_upload">开始上传</string>

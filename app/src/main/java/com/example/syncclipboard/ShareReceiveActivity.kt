@@ -52,6 +52,12 @@ class ShareReceiveActivity : AppCompatActivity() {
                 putExtra(NotificationProgressService.EXTRA_TEXT, sharedText)
             }
             androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
+        } else if (style == UiStyleStorage.STYLE_FLOATING_WINDOW) {
+            val intent = Intent(this, FloatingOverlayService::class.java).apply {
+                action = FloatingOverlayService.ACTION_UPLOAD_TEXT
+                putExtra(FloatingOverlayService.EXTRA_TEXT, sharedText)
+            }
+            androidx.core.content.ContextCompat.startForegroundService(this, intent)
         } else {
             val progressIntent = Intent(this, ProgressActivity::class.java).apply {
                 putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
@@ -80,6 +86,13 @@ class ShareReceiveActivity : AppCompatActivity() {
                 putExtra(NotificationProgressService.EXTRA_FILE_NAME, fileName)
             }
             androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
+        } else if (style == UiStyleStorage.STYLE_FLOATING_WINDOW) {
+            val intent = Intent(this, FloatingOverlayService::class.java).apply {
+                action = FloatingOverlayService.ACTION_UPLOAD_FILE
+                putExtra(FloatingOverlayService.EXTRA_FILE_URI, uri.toString())
+                putExtra(FloatingOverlayService.EXTRA_FILE_NAME, fileName)
+            }
+            androidx.core.content.ContextCompat.startForegroundService(this, intent)
         } else {
             val progressIntent = Intent(this, ProgressActivity::class.java).apply {
                 putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_FILE)
