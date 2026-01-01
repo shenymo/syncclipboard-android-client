@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.Icon
@@ -75,6 +73,7 @@ class FloatingOverlayService : LifecycleService() {
     private var params: WindowManager.LayoutParams? = null
 
     private val statusTextState = mutableStateOf("")
+    private val contentTextState = mutableStateOf<String?>(null)
     private val isSuccessState = mutableStateOf(false)
     private val isErrorState = mutableStateOf(false)
     private val operationState = mutableStateOf("")
@@ -109,6 +108,12 @@ class FloatingOverlayService : LifecycleService() {
         super.onDestroy()
     }
 
+    private fun previewForOverlay(raw: String, maxChars: Int = 80): String {
+        val normalized = raw.trim().replace("\r", " ").replace("\n", " ")
+        if (normalized.isEmpty()) return ""
+        return if (normalized.length > maxChars) normalized.take(maxChars) + "…" else normalized
+    }
+
     private fun startUploadText(text: String) {
         if (text.isEmpty()) {
             stopSelf()
@@ -118,12 +123,15 @@ class FloatingOverlayService : LifecycleService() {
         operationState.value = ProgressActivity.OP_UPLOAD_CLIPBOARD
         isSuccessState.value = false
         isErrorState.value = false
-        statusTextState.value = getString(R.string.progress_upload_clipboard)
+        statusTextState.value = "正在准备上传…"
+        contentTextState.value = previewForOverlay(text)
 
         showOverlay()
         updateForegroundNotification()
 
         lifecycleScope.launch {
+            statusTextState.value = "正在读取配置…"
+            updateForegroundNotification()
             val config = ConfigStorage.loadConfig(this@FloatingOverlayService)
             if (config == null) {
                 isErrorState.value = true
@@ -135,6 +143,9 @@ class FloatingOverlayService : LifecycleService() {
                 autoCloseIfNeeded()
                 return@launch
             }
+
+            statusTextState.value = getString(R.string.progress_upload_clipboard)
+            updateForegroundNotification()
 
             val result = withContext(Dispatchers.IO) {
                 SyncClipboardApi.uploadText(config, text)
@@ -159,12 +170,15 @@ class FloatingOverlayService : LifecycleService() {
         operationState.value = ProgressActivity.OP_DOWNLOAD_CLIPBOARD
         isSuccessState.value = false
         isErrorState.value = false
-        statusTextState.value = getString(R.string.progress_download_clipboard)
+        statusTextState.value = "正在准备下载…"
+        contentTextState.value = null
 
         showOverlay()
         updateForegroundNotification()
 
         lifecycleScope.launch {
+            statusTextState.value = "正在读取配置…"
+            updateForegroundNotification()
             val config = ConfigStorage.loadConfig(this@FloatingOverlayService)
             if (config == null) {
                 isErrorState.value = true
@@ -176,6 +190,9 @@ class FloatingOverlayService : LifecycleService() {
                 autoCloseIfNeeded()
                 return@launch
             }
+
+            statusTextState.value = getString(R.string.progress_download_clipboard)
+            updateForegroundNotification()
 
             val profileResult = withContext(Dispatchers.IO) {
                 SyncClipboardApi.getClipboardProfile(config)
@@ -232,6 +249,10 @@ class FloatingOverlayService : LifecycleService() {
                     return@launch
                 }
 
+                statusTextState.value = "正在写入本机剪贴板…"
+                contentTextState.value = previewForOverlay(text)
+                updateForegroundNotification()
+
                 val clipboardManager =
                     getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("SyncClipboard", text)
@@ -287,6 +308,7 @@ class FloatingOverlayService : LifecycleService() {
             setViewTreeSavedStateRegistryOwner(overlaySavedStateOwner)
             setContent {
                 val statusText by rememberUpdatedState(statusTextState.value)
+                val contentText by rememberUpdatedState(contentTextState.value)
                 val isSuccess by rememberUpdatedState(isSuccessState.value)
                 val isError by rememberUpdatedState(isErrorState.value)
                 val operation by rememberUpdatedState(operationState.value)
@@ -297,6 +319,7 @@ class FloatingOverlayService : LifecycleService() {
                     FloatingServiceCard(
                         operation = operation,
                         statusText = statusText,
+                        contentText = contentText,
                         isSuccess = isSuccess,
                         isError = isError,
                         onMoveBy = moveHandler,
@@ -387,14 +410,13 @@ class FloatingOverlayService : LifecycleService() {
     private fun FloatingServiceCard(
         operation: String,
         statusText: String,
+        contentText: String?,
         isSuccess: Boolean,
         isError: Boolean,
         onMoveBy: (dx: Float, dy: Float) -> Unit,
         onClose: () -> Unit
     ) {
         val iconVector = when {
-            isSuccess -> Icons.Default.Check
-            isError -> Icons.Default.Close
             operation == ProgressActivity.OP_DOWNLOAD_CLIPBOARD -> Icons.Default.CloudDownload
             else -> Icons.Default.CloudUpload
         }
@@ -404,6 +426,9 @@ class FloatingOverlayService : LifecycleService() {
             isError -> MaterialTheme.colorScheme.error
             else -> MaterialTheme.colorScheme.onSurface
         }
+
+        val displayStatusText = statusText.ifBlank { "准备中…" }
+        val displayContentText = contentText?.takeIf { it.isNotBlank() } ?: "—"
 
         val longPressSeconds = remember { UiStyleStorage.loadLongPressCloseSeconds(this) }
 
@@ -441,17 +466,29 @@ class FloatingOverlayService : LifecycleService() {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.widthIn(min = 200.dp, max = 320.dp)
+                ) {
                     Icon(
                         imageVector = iconVector,
                         contentDescription = null,
                         tint = iconColor,
                         modifier = Modifier.size(24.dp)
                     )
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = displayStatusText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = displayContentText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }

@@ -1,12 +1,16 @@
 package com.example.syncclipboard
 
+import android.Manifest
 import android.content.ContentResolver
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 /**
  * 系统分享入口：
@@ -35,27 +39,57 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     private fun handleSendText() {
         val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        val progressIntent = Intent(this, ProgressActivity::class.java).apply {
-            putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
-            putExtra(ProgressActivity.EXTRA_SHARED_TEXT, sharedText)
-            // 在独立任务中显示对话框，避免唤起设置主界面
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val style = UiStyleStorage.loadProgressStyle(this)
+        val canNotify =
+            style == UiStyleStorage.STYLE_NOTIFICATION &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+
+        if (canNotify) {
+            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
+                action = NotificationProgressService.ACTION_UPLOAD_TEXT
+                putExtra(NotificationProgressService.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
+                putExtra(NotificationProgressService.EXTRA_TEXT, sharedText)
+            }
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
+        } else {
+            val progressIntent = Intent(this, ProgressActivity::class.java).apply {
+                putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_SHARED_TEXT)
+                putExtra(ProgressActivity.EXTRA_SHARED_TEXT, sharedText)
+                // 在独立任务中显示对话框，避免唤起设置主界面
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(progressIntent)
         }
-        startActivity(progressIntent)
     }
 
     private fun handleSendFile() {
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: return
         val fileName = resolveFileName(uri) ?: uri.lastPathSegment ?: "shared_file"
 
-        val progressIntent = Intent(this, ProgressActivity::class.java).apply {
-            putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_FILE)
-            putExtra(ProgressActivity.EXTRA_FILE_URI, uri.toString())
-            putExtra(ProgressActivity.EXTRA_FILE_NAME, fileName)
-            // 在独立任务中显示对话框，避免唤起设置主界面
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val style = UiStyleStorage.loadProgressStyle(this)
+        val canNotify =
+            style == UiStyleStorage.STYLE_NOTIFICATION &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+
+        if (canNotify) {
+            val serviceIntent = Intent(this, NotificationProgressService::class.java).apply {
+                action = NotificationProgressService.ACTION_UPLOAD_FILE
+                putExtra(NotificationProgressService.EXTRA_FILE_URI, uri.toString())
+                putExtra(NotificationProgressService.EXTRA_FILE_NAME, fileName)
+            }
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
+        } else {
+            val progressIntent = Intent(this, ProgressActivity::class.java).apply {
+                putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_FILE)
+                putExtra(ProgressActivity.EXTRA_FILE_URI, uri.toString())
+                putExtra(ProgressActivity.EXTRA_FILE_NAME, fileName)
+                // 在独立任务中显示对话框，避免唤起设置主界面
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(progressIntent)
         }
-        startActivity(progressIntent)
     }
 
     private fun resolveFileName(uri: Uri): String? {

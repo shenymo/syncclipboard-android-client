@@ -1,9 +1,12 @@
 package com.example.syncclipboard
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.service.quicksettings.TileService
+import androidx.core.content.ContextCompat
 
 /**
  * 快捷设置磁贴：上传当前系统剪贴板。
@@ -15,11 +18,24 @@ class UploadClipboardTileService : TileService() {
     override fun onClick() {
         super.onClick()
         val progressStyle = UiStyleStorage.loadProgressStyle(this)
+        if (
+            progressStyle == UiStyleStorage.STYLE_NOTIFICATION &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val intent = Intent(this, SettingsActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivityAndCollapse(intent)
+            return
+        }
         val intent =
-            if (progressStyle == UiStyleStorage.STYLE_FLOATING_WINDOW) {
-                Intent(this, ClipboardBridgeActivity::class.java)
-            } else {
-                Intent(this, ProgressActivity::class.java).apply {
+            when (progressStyle) {
+                UiStyleStorage.STYLE_FLOATING_WINDOW -> Intent(this, ClipboardBridgeActivity::class.java)
+                UiStyleStorage.STYLE_NOTIFICATION -> Intent(this, ClipboardBridgeActivity::class.java).apply {
+                    putExtra(ClipboardBridgeActivity.EXTRA_MODE, ClipboardBridgeActivity.MODE_NOTIFICATION_PREPARE_UPLOAD)
+                }
+                else -> Intent(this, ProgressActivity::class.java).apply {
                     putExtra(ProgressActivity.EXTRA_OPERATION, ProgressActivity.OP_UPLOAD_CLIPBOARD)
                 }
             }.apply {

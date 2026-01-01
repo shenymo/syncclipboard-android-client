@@ -6,6 +6,8 @@ import android.content.Context
  * 用于存储 ProgressActivity 的界面样式选择：
  * - 对话框样式（默认）
  * - BottomSheet 底部弹出样式
+ * - 悬浮窗样式
+ * - 通知样式
  */
 object UiStyleStorage {
 
@@ -18,6 +20,7 @@ object UiStyleStorage {
     const val STYLE_DIALOG = "dialog"
     const val STYLE_BOTTOM_SHEET = "bottom_sheet"
     const val STYLE_FLOATING_WINDOW = "floating_window"
+    const val STYLE_NOTIFICATION = "notification"
 
     fun saveProgressStyle(context: Context, style: String) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

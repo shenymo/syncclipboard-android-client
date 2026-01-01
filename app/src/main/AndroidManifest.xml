@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 悬浮窗（在其他应用上层显示）权限：属于特殊权限，需要引导用户到系统设置开启 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Android 13+ 通知权限（通知样式需要） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 前台服务：用于在后台稳定执行上传/下载并展示悬浮窗进度 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -84,6 +86,11 @@
 
         <service
             android:name=".FloatingOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".NotificationProgressService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 

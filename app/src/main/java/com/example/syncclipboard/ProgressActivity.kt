@@ -37,8 +37,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.gestures.detectTapGestures
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -123,6 +121,12 @@ class ProgressActivity : AppCompatActivity() {
 
     private fun setContentText(text: String?) {
         contentTextState.value = text
+    }
+
+    private fun previewForOverlay(raw: String, maxChars: Int = 80): String {
+        val normalized = raw.trim().replace("\r", " ").replace("\n", " ")
+        if (normalized.isEmpty()) return ""
+        return if (normalized.length > maxChars) normalized.take(maxChars) + "…" else normalized
     }
 
     private fun showActionButton(text: String, onClick: () -> Unit) {
@@ -296,7 +300,7 @@ class ProgressActivity : AppCompatActivity() {
 
                     // 上传完成后只显示结果文字，不展示剪贴板内容
                     setStatusText(result.message)
-                    setContentText(null)
+                    setContentText(if (useFloatingWindow) result.content?.let { previewForOverlay(it) } else null)
                     if (result.success) isSuccessState.value = true else isErrorState.value = true
 
                     // 对话框样式下可以额外弹出一条短 Toast；BottomSheet 已在界面内展示结果，无需 Toast
@@ -325,6 +329,13 @@ class ProgressActivity : AppCompatActivity() {
                 OP_UPLOAD_FILE -> getString(R.string.progress_upload_file)
                 OP_TEST_CONNECTION -> getString(R.string.progress_test_connection)
                 else -> getString(R.string.progress_upload_clipboard)
+                }
+            )
+            setContentText(
+                when (operation) {
+                    OP_UPLOAD_SHARED_TEXT -> intent.getStringExtra(EXTRA_SHARED_TEXT)?.let { previewForOverlay(it) }?.takeIf { it.isNotEmpty() }
+                    OP_UPLOAD_FILE -> intent.getStringExtra(EXTRA_FILE_NAME)?.takeIf { it.isNotBlank() }
+                    else -> null
                 }
             )
             // 下载剪贴板 / 分享上传 / 测试连接 不需要访问本机剪贴板，
@@ -419,6 +430,13 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun performOperation(operation: String): OperationResult {
+        runOnUiThread {
+            if (statusTextState.value.isBlank()) {
+                setStatusText("正在准备…")
+            }
+        }
+
+        runOnUiThread { setStatusText("正在读取配置…") }
         val config = ConfigStorage.loadConfig(this)
             ?: return OperationResult(
                 success = false,
@@ -447,6 +465,10 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun uploadClipboard(config: ServerConfig): OperationResult {
+        runOnUiThread {
+            setStatusText("正在读取剪贴板…")
+            setContentText(null)
+        }
         val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = clipboardManager.primaryClip
         val text = if (clip != null && clip.itemCount > 0) {
@@ -463,6 +485,13 @@ class ProgressActivity : AppCompatActivity() {
                 ),
                 content = null
             )
+        }
+
+        runOnUiThread {
+            if (useFloatingWindow) {
+                setContentText(previewForOverlay(text))
+            }
+            setStatusText("正在上传剪贴板…")
         }
 
         val result = SyncClipboardApi.uploadText(config, text)
@@ -485,6 +514,7 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun downloadClipboard(config: ServerConfig): OperationResult {
+        runOnUiThread { setStatusText("正在获取服务器剪贴板…") }
         // 先获取完整 Profile，根据 File / Type 决定是文件还是文本。
         val profileResult = SyncClipboardApi.getClipboardProfile(config)
         if (!profileResult.success || profileResult.data == null) {
@@ -528,6 +558,12 @@ class ProgressActivity : AppCompatActivity() {
                     content = null
                 )
             }
+            runOnUiThread {
+                setStatusText("正在写入本机剪贴板…")
+                if (useFloatingWindow) {
+                    setContentText(previewForOverlay(text))
+                }
+            }
             val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("SyncClipboard", text)
             clipboardManager.setPrimaryClip(clip)
@@ -560,6 +596,13 @@ class ProgressActivity : AppCompatActivity() {
                 ),
                 content = null
             )
+        }
+
+        runOnUiThread {
+            setStatusText("正在上传分享文本…")
+            if (useFloatingWindow) {
+                setContentText(previewForOverlay(sharedText))
+            }
         }
         val result = SyncClipboardApi.uploadText(config, sharedText)
         return if (result.success) {
@@ -597,7 +640,7 @@ class ProgressActivity : AppCompatActivity() {
             // 步骤 1：在 UI 上提示“准备上传文件”
             runOnUiThread {
                 setStatusText("正在准备上传文件…")
-                setContentText(null)
+                setContentText(fileName)
             }
 
             // 尝试获取文件大小，用于更准确显示上传进度；失败则记为未知大小
@@ -644,14 +687,14 @@ class ProgressActivity : AppCompatActivity() {
                             speedBytesPerSec = speedBytesPerSec
                         )
                         setStatusText(progressText)
-                        setContentText(null)
+                        setContentText(fileName)
                     }
                 }
                 if (result.success) {
                     // 步骤 3：文件上传完毕，正在等待服务器确认剪贴板状态更新
                     runOnUiThread {
                         setStatusText("上传完成，正在更新服务器状态…")
-                        setContentText(null)
+                        setContentText(fileName)
                     }
                     OperationResult(
                         success = true,
@@ -767,7 +810,7 @@ class ProgressActivity : AppCompatActivity() {
                             speedBytesPerSec = speedBytesPerSec
                         )
                         setStatusText(progressText)
-                        setContentText(null)
+                        setContentText(finalFileName)
                     }
                 }
                 if (!result.success) {
@@ -846,6 +889,7 @@ class ProgressActivity : AppCompatActivity() {
     }
 
     private fun testConnection(config: ServerConfig): OperationResult {
+        runOnUiThread { setStatusText(getString(R.string.progress_test_connection)) }
         val result = SyncClipboardApi.testConnection(config)
         return if (result.success) {
             OperationResult(
@@ -1277,8 +1321,6 @@ class ProgressActivity : AppCompatActivity() {
         ) {
             // Determine Icon
             val iconVector = when {
-                isSuccess -> Icons.Default.Check
-                isError -> Icons.Default.Close
                 operation == OP_UPLOAD_CLIPBOARD || operation == OP_UPLOAD_FILE || operation == OP_UPLOAD_SHARED_TEXT -> Icons.Default.ArrowUpward
                 else -> Icons.Default.ArrowDownward
             }
@@ -1288,6 +1330,9 @@ class ProgressActivity : AppCompatActivity() {
                 isError -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.onSurface
             }
+
+            val displayStatusText = statusText.ifBlank { "准备中…" }
+            val displayContentText = contentText?.takeIf { it.isNotBlank() } ?: "—"
 
             Surface(
                 modifier = Modifier
@@ -1335,13 +1380,21 @@ class ProgressActivity : AppCompatActivity() {
                             modifier = Modifier.size(24.dp)
                         )
 
-                        Text(
-                            text = if (!contentText.isNullOrEmpty()) contentText else statusText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = displayStatusText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = displayContentText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
                     if (actionButton != null) {

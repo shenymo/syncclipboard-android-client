@@ -1,10 +1,15 @@
 package com.example.syncclipboard
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.syncclipboard.ui.theme.SyncClipboardTheme
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -108,6 +114,23 @@ private fun SettingsScreen() {
         )
         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         currentContext.startActivity(intent)
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            progressUiStyle = UiStyleStorage.STYLE_NOTIFICATION
+            UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_NOTIFICATION)
+        } else {
+            progressUiStyle = UiStyleStorage.STYLE_DIALOG
+            UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_DIALOG)
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.settings_notification_permission_required)
+                )
+            }
+        }
     }
 
     Scaffold(
@@ -201,6 +224,27 @@ private fun SettingsScreen() {
                                 )
                             }
                             openOverlayPermissionSettings()
+                        }
+                    }
+                )
+                SettingRadioRow(
+                    selected = progressUiStyle == UiStyleStorage.STYLE_NOTIFICATION,
+                    text = stringResource(id = R.string.settings_ui_style_notification),
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val granted = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                progressUiStyle = UiStyleStorage.STYLE_NOTIFICATION
+                                UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_NOTIFICATION)
+                            } else {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        } else {
+                            progressUiStyle = UiStyleStorage.STYLE_NOTIFICATION
+                            UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_NOTIFICATION)
                         }
                     }
                 )
