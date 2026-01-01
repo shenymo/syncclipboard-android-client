@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 悬浮窗（在其他应用上层显示）权限：属于特殊权限，需要引导用户到系统设置开启 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- 前台服务：用于在后台稳定执行上传/下载并展示悬浮窗进度 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".SyncClipboardApp"
@@ -29,6 +32,13 @@
             android:name=".ProgressActivity"
             android:exported="true"
             android:theme="@style/Theme.SyncClipboard.Dialog"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.example.syncclipboard.qs" />
+
+        <activity
+            android:name=".ClipboardBridgeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SyncClipboard.TransparentHost"
             android:excludeFromRecents="true"
             android:taskAffinity="com.example.syncclipboard.qs" />
 
@@ -71,6 +81,11 @@
                 android:name="android.service.quicksettings.TITLE"
                 android:value="@string/tile_download_title" />
         </service>
+
+        <service
+            android:name=".FloatingOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
     </application>
 

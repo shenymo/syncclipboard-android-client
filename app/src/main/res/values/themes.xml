@@ -32,4 +32,12 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimAmount">0.0</item>
     </style>
+
+    <!-- 用于 Tile 触发的剪贴板桥接 Activity：全屏透明，仅用于短暂获取焦点读取剪贴板 -->
+    <style name="Theme.SyncClipboard.TransparentHost" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimAmount">0.0</item>
+    </style>
 </resources>

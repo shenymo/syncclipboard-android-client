@@ -22,6 +22,9 @@ object SyncClipboardApi {
 
     data class ApiResult<T>(val success: Boolean, val data: T? = null, val errorMessage: String? = null)
 
+    private const val CONNECT_TIMEOUT_MS = 5_000
+    private const val READ_TIMEOUT_MS = 15_000
+
     /**
      * /SyncClipboard.json 返回的完整信息，用于区分 Text / File 等类型。
      */
@@ -42,14 +45,30 @@ object SyncClipboardApi {
         return "basic $encoded"
     }
 
+    private fun HttpURLConnection.applyCommonConfig(config: ServerConfig) {
+        connectTimeout = CONNECT_TIMEOUT_MS
+        readTimeout = READ_TIMEOUT_MS
+        setRequestProperty("authorization", buildAuthHeader(config))
+        setRequestProperty("Accept", "application/json")
+        // 明确声明 keep-alive，尽量复用 TCP 连接，减少重复握手成本（服务端需支持）。
+        setRequestProperty("Connection", "Keep-Alive")
+    }
+
+    private fun HttpURLConnection.closeQuietly() {
+        runCatching { inputStream }.getOrNull()?.runCatching { close() }
+        runCatching { errorStream }.getOrNull()?.runCatching { close() }
+        runCatching { disconnect() }
+    }
+
     fun uploadText(config: ServerConfig, text: String): ApiResult<Unit> {
+        var conn: HttpURLConnection? = null
         return try {
             val url = URL(buildApiUrl(config))
-            val conn = (url.openConnection() as HttpURLConnection).apply {
+            conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "PUT"
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             val body = JSONObject().apply {
@@ -72,6 +91,8 @@ object SyncClipboardApi {
             }
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        } finally {
+            conn?.closeQuietly()
         }
     }
 
@@ -79,11 +100,12 @@ object SyncClipboardApi {
      * 获取当前服务器端剪贴板完整 Profile（Type / Clipboard / File）。
      */
     fun getClipboardProfile(config: ServerConfig): ApiResult<ClipboardProfile> {
+        var conn: HttpURLConnection? = null
         return try {
             val url = URL(buildApiUrl(config))
-            val conn = (url.openConnection() as HttpURLConnection).apply {
+            conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             val code = conn.responseCode
@@ -108,15 +130,18 @@ object SyncClipboardApi {
             )
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        } finally {
+            conn?.closeQuietly()
         }
     }
 
     fun downloadText(config: ServerConfig): ApiResult<String> {
+        var conn: HttpURLConnection? = null
         return try {
             val url = URL(buildApiUrl(config))
-            val conn = (url.openConnection() as HttpURLConnection).apply {
+            conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             val code = conn.responseCode
@@ -139,6 +164,8 @@ object SyncClipboardApi {
             ApiResult(success = true, data = clipboard)
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        } finally {
+            conn?.closeQuietly()
         }
     }
 
@@ -164,15 +191,17 @@ object SyncClipboardApi {
         totalBytes: Long = -1L,
         onProgress: ((uploadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): ApiResult<Unit> {
+        var uploadConn: HttpURLConnection? = null
+        var syncConn: HttpURLConnection? = null
         return try {
             val baseUrl = config.baseUrl.trimEnd('/')
             val fileUrl = URL("$baseUrl/file/$fileName")
 
             // 第一步：上传文件内容
-            val uploadConn = (fileUrl.openConnection() as HttpURLConnection).apply {
+            uploadConn = (fileUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "PUT"
                 doOutput = true
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             uploadConn.outputStream.use { out ->
@@ -196,11 +225,11 @@ object SyncClipboardApi {
 
             // 第二步：更新 SyncClipboard.json 为 File 类型
             val syncUrl = URL(buildApiUrl(config))
-            val syncConn = (syncUrl.openConnection() as HttpURLConnection).apply {
+            syncConn = (syncUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "PUT"
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             val body = JSONObject().apply {
@@ -223,6 +252,9 @@ object SyncClipboardApi {
             }
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        } finally {
+            uploadConn?.closeQuietly()
+            syncConn?.closeQuietly()
         }
     }
 
@@ -237,13 +269,14 @@ object SyncClipboardApi {
         out: OutputStream,
         onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): ApiResult<Unit> {
+        var conn: HttpURLConnection? = null
         return try {
             val baseUrl = config.baseUrl.trimEnd('/')
             val fileUrl = URL("$baseUrl/file/$fileName")
 
-            val conn = (fileUrl.openConnection() as HttpURLConnection).apply {
+            conn = (fileUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                setRequestProperty("authorization", buildAuthHeader(config))
+                applyCommonConfig(config)
             }
 
             val code = conn.responseCode
@@ -270,6 +303,8 @@ object SyncClipboardApi {
             ApiResult(success = true)
         } catch (e: Exception) {
             ApiResult(success = false, errorMessage = e.message ?: e.toString())
+        } finally {
+            conn?.closeQuietly()
         }
     }
 
