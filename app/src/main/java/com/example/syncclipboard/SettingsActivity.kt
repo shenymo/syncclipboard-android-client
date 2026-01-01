@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -34,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +82,8 @@ private fun SettingsScreen() {
 
     var progressUiStyle by rememberSaveable { mutableStateOf(UiStyleStorage.STYLE_DIALOG) }
     var bottomSheetCancelOnTouchOutside by rememberSaveable { mutableStateOf(false) }
+    var longPressCloseSeconds by rememberSaveable { mutableFloatStateOf(2.0f) }
+    var autoCloseDelaySeconds by rememberSaveable { mutableFloatStateOf(3.0f) }
 
     var isTesting by remember { mutableStateOf(false) }
 
@@ -93,6 +97,8 @@ private fun SettingsScreen() {
         }
         progressUiStyle = UiStyleStorage.loadProgressStyle(context)
         bottomSheetCancelOnTouchOutside = UiStyleStorage.loadBottomSheetCancelOnTouchOutside(context)
+        longPressCloseSeconds = UiStyleStorage.loadLongPressCloseSeconds(context)
+        autoCloseDelaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(context)
     }
 
     fun openOverlayPermissionSettings() {
@@ -228,6 +234,43 @@ private fun SettingsScreen() {
                     }
                 )
                 Text(text = stringResource(id = R.string.settings_bottom_sheet_cancel_on_touch_outside))
+            }
+
+            if (progressUiStyle == UiStyleStorage.STYLE_FLOATING_WINDOW) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Text(
+                    text = "悬浮窗设置",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Text(
+                    text = "长按关闭时间: ${String.format("%.1f", longPressCloseSeconds)} 秒",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = longPressCloseSeconds,
+                    onValueChange = { 
+                        longPressCloseSeconds = it 
+                        UiStyleStorage.saveLongPressCloseSeconds(context, it)
+                    },
+                    valueRange = 0.5f..5.0f,
+                    steps = 9
+                )
+
+                Text(
+                    text = "自动关闭延迟: ${String.format("%.1f", autoCloseDelaySeconds)} 秒",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = autoCloseDelaySeconds,
+                    onValueChange = { 
+                        autoCloseDelaySeconds = it
+                        UiStyleStorage.saveAutoCloseDelaySeconds(context, it)
+                    },
+                    valueRange = 0.0f..10.0f,
+                    steps = 19
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))

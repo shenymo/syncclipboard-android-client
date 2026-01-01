@@ -1,182 +1,116 @@
 # SyncClipboard Android Client
 
-一个简单的 Android 客户端，用来把手机上的文本 / 文件剪贴板与已有的 SyncClipboard 服务器进行同步。
+这是一个 **SyncClipboard** 系统的 Android 客户端，用于在你的 Android 设备和 SyncClipboard 服务器之间无缝同步剪贴板（文本和文件）。
 
-> 本仓库只包含 Android 客户端，需要自行部署 SyncClipboard 服务端（接口示例见根目录 `Syncclipboardapi_files/swagger.json`）。
+> **注意**：本仓库仅包含 **Android 客户端**。你需要自行部署运行 [SyncClipboard 服务端](https://github.com/DGP-Studio/SyncClipboard)（或兼容的实现）才能使用此应用。
 
-## 功能特点一览
+## ✨ 功能特点
 
-- 通过 HTTP 与已有 SyncClipboard 服务交互，使用 **Basic 认证（`username:password`）**。
-- 支持 **上传 / 下载文本剪贴板**。
-- 支持通过系统 **分享** 上传任意文件 / 图片，在服务器侧以文件形式保存。
-- 提供 **快捷设置磁贴（Quick Settings Tile）**，一键上传 / 下载剪贴板。
-- 所有操作统一在一个前台 **进度界面** 中显示，支持对话框和 BottomSheet 两种样式。
-- 下载文件时，支持 **同名文件“替换 / 保留”选择**，并提供“打开”按钮调用系统应用查看文件。
+*   **剪贴板同步**：一键上传和下载文本剪贴板。
+*   **文件传输**：
+    *   **上传**：从任意应用（相册、文件管理器等）分享文件或图片到 "SyncClipboard" 即可上传至服务器。
+    *   **下载**：直接从服务器下载文件到设备的 `Download` 目录。
+    *   **冲突处理**：智能处理重名文件（支持“替换”或“保留两者”）。
+    *   **即时打开**：下载完成后可直接调用系统兼容的应用打开文件。
+*   **快捷设置磁贴 (Quick Settings Tiles)**：在通知栏提供便捷的“上传剪贴板”和“下载剪贴板”磁贴。
+*   **多种界面样式**：
+    *   **对话框 (Dialog)**：经典的居中弹窗。
+    *   **底部弹窗 (Bottom Sheet)**：现代化的底部滑出面板。
+    *   **悬浮窗 (Floating Window)**：不打扰操作的悬浮小窗（需要悬浮窗权限），适合多任务场景。
+*   **安全**：支持 HTTP Basic 认证。
+*   **Material Design**：遵循现代 Android 设计规范，支持动态取色。
 
-## 服务器与鉴权
+## 📱 环境要求
 
-- 客户端通过 `SyncClipboardApi.kt` 与服务端交互：
-  - 上传文本：`PUT /SyncClipboard.json`
-  - 下载文本 / 文件状态：`GET /SyncClipboard.json`
-  - 上传文件内容：`PUT /file/{fileName}`
-- 认证使用 HTTP Basic：
-  - 请求头：`authorization = "basic " + base64(username:password)`。
-  - 你需要在服务端按同样方式校验用户名和密码。
+*   **Android**：Android 12 (API level 31) 或更高版本。
+*   **服务端**：可通过 HTTP/HTTPS 访问的兼容 SyncClipboard 服务端。
 
-## 界面与设置
+## 🚀 以此开始
 
-### 服务器配置
+### 1. 安装
 
-在主界面 `SettingsActivity` 中可以设置：
+目前你需要从源码构建 APK（请参考下方的 [源码构建](#-源码构建) 章节）。
 
-- 服务器地址（Base URL），例如：`http://192.168.x.x:5033`
-- 用户名
-- 密码
+### 2. 配置
 
-配置会存储在 `SharedPreferences` 中（`ConfigStorage`），应用重启后仍然有效。  
-同时提供「测试连接」按钮，会调用 `/SyncClipboard.json` 验证地址和用户名/密码是否正确。
+1.  打开 **SyncClipboard** 应用。
+2.  进入 **设置 (Settings)** 界面，配置以下信息：
+    *   **服务器地址 (Server Address)**：服务器的完整 URL（例如 `http://192.168.1.100:5033`）。
+    *   **用户名 (Username)**：你设置的用户名。
+    *   **密码 / Token**：你设置的密码。
+3.  点击 **保存配置 (Save Configuration)**。
+4.  点击 **测试连接 (Test Connection)** 验证配置是否正确。
 
-### 进度界面样式
+### 3. 界面自定义
 
-所有一次性操作（上传、下载、文件传输、测试连接）都由 `ProgressActivity` 承担。  
-在设置页可以选择两种样式（`UiStyleStorage` 持久化）：
+你可以在 **进度界面样式 (Progress Window Style)** 中选择进度条的展示方式：
+*   **对话框**：默认的居中弹窗。
+*   **底部弹窗**：从底部滑出的面板。
+    *   *选项*：可开关“点击空白处关闭”功能。
+*   **悬浮窗**：始终显示在最上层的小窗口。
 
-- **对话框样式**：小对话框悬浮在当前应用之上，下方界面略微变暗。
-- **BottomSheet 样式**：底部弹出的半屏卡片，带轻微圆角和阴影。
+## 📖 使用指南
 
-另外还有一个行为开关：
+### 同步文本剪贴板
+1.  **添加磁贴**：下拉通知栏，点击编辑（铅笔）图标，将 **上传剪贴板** 和 **下载剪贴板** 磁贴拖入活动区域。
+2.  **上传**：在手机上复制好文本，然后点击通知栏的 **上传剪贴板** 磁贴。
+3.  **下载**：点击 **下载剪贴板** 磁贴。服务器上的文本将自动复制到你的手机剪贴板。
 
-- **BottomSheet 行为**
-  - 选项：“点击空白处关闭底部弹窗”
-  - 关闭：只能下拉或按返回键关闭，避免误触；
-  - 开启：点击 BottomSheet 以外区域即可关闭。
+### 传输文件
 
-对话框样式下仍保留简短 Toast 提示；BottomSheet 模式下只用卡片里的文字提示，不再弹 Toast，避免遮挡。
+**上传（手机到服务器）：**
+1.  打开任意应用（如相册、文件管理器）。
+2.  选择文件或图片，点击 **分享**。
+3.  在分享菜单中选择 **SyncClipboard**。
+4.  文件将自动上传，同时服务器的剪贴板类型会被设置为 `File`。
 
-## 使用流程
+**下载（服务器到手机）：**
+1.  确保服务器当前的剪贴板类型是 `File`。
+2.  点击手机通知栏的 **下载剪贴板** 磁贴。
+3.  应用会自动检测到文件并开始下载到 **Downloads** 目录。
+4.  **冲突处理**：如果本地已存在同名文件，会弹出提示：
+    *   **替换**：覆盖现有文件。
+    *   **保留**：保留原文件，新文件自动重命名（例如 `image (2).png`）。
+5.  下载完成后，点击 **打开** 即可查看文件。
 
-### 1. 配置服务器
+## 🛠 技术细节
 
-1. 打开应用，进入设置界面；
-2. 填写：
-   - 服务器地址（如 `http://192.168.x.x:5033`）
-   - 用户名
-   - 密码
-3. 点击「保存配置」保存到本地；
-4. 可点击「测试连接」验证与服务器之间的连通性和 Basic 认证是否通过。
+### API 接口
+客户端使用以下接口与服务端通信：
 
-### 2. 上传 / 下载文本剪贴板
+*   **鉴权**：HTTP Basic Auth (`Authorization: Basic <base64_credentials>`)
+*   **GET /SyncClipboard.json**：获取当前剪贴板状态（类型、内容、文件 URL）。
+*   **PUT /SyncClipboard.json**：更新剪贴板状态（文本内容或文件元数据）。
+*   **PUT /file/{filename}**：上传文件原始内容。
+*   **GET /file/{filename}**：下载文件原始内容。
 
-- 上传文本：
-  - 在系统任意位置复制文本；
-  - 从系统快捷设置中添加“上传剪贴板”磁贴；
-  - 点击磁贴后，会弹出 `ProgressActivity`，显示“正在上传剪贴板…”以及结果。
+### 权限说明
+*   `INTERNET`：用于连接服务器。
+*   `SYSTEM_ALERT_WINDOW`：仅在使用 **悬浮窗** 样式时需要。
 
-- 下载文本：
-  - 确保服务器端当前剪贴板 `Type = "Text"`；
-  - 点击“下载剪贴板”磁贴；
-  - 成功后，文本会写入本机系统剪贴板，并在界面上显示一小段内容。
+## 🔨 源码构建
 
-### 3. 通过“分享”上传文本或文件
+### 前置条件
+*   Android Studio Koala 或更新版本。
+*   JDK 17+。
 
-`ShareReceiveActivity` 作为系统分享入口：
-
-- 分享文本：
-  - 在任意 App 中选择文本 → 系统“分享” → 选择 “SyncClipboard”；
-  - 会以文本形式上传到服务器剪贴板。
-
-- 分享文件 / 图片：
-  - 在文件管理器 / 相册等 App 中分享文件或图片到 “SyncClipboard”；
-  - `ProgressActivity` 会显示上传进度（包括大小和速度）。
-
-文件上传流程：
-
-1. `PUT /file/{fileName}` 上传文件内容；
-2. `PUT /SyncClipboard.json` 设置 `Type = "File"`，`File = fileName`。
-
-### 4. 下载服务器上的文件（含同名冲突处理）
-
-当服务器端 `ClipboardProfile` 中 `File` 字段非空时，“下载剪贴板”会进入 **文件下载** 流程：
-
-1. 应用在系统公共 Download 目录创建 / 选择目标文件名：
-   - 先检查 Download 目录中是否已存在同名文件；
-   - 如不存在，直接使用服务器给出的文件名；
-   - 如存在，则弹出冲突提示。
-2. 同名文件冲突提示界面：
-   - 标题：显示原文件名，例如 `report.pdf`；
-   - 内容：`目标目录中已存在同名文件，是否保留已存在的同名文件？`
-   - 两个按钮：
-     - **替换**：覆盖已有文件内容，文件名和后缀不变；
-     - **保留**：保留原文件，同时下载为新的文件名：
-       - 例如：`report.pdf` → `report (2).pdf`、`report (3).pdf`…，只在名字后追加序号，不改扩展名。
-3. 确定最终文件名后，从服务器下载文件内容并写入该文件。
-4. 下载完成后的界面：
-   - 标题：`已保存至 "下载目录路径"`（如 `/storage/emulated/0/Download`）；
-   - 内容：显示实际保存的文件名（例如 `report (2).pdf`）；
-   - 按钮：**打开**
-     - 点击后使用 `ACTION_VIEW` + 合理的 MIME type（根据后缀猜测）；
-     - 交由系统选择可以打开该类型文件的应用（如 Word、WPS、文件查看器等）；
-     - 若系统无可用应用，则提示“没有可用于打开该文件的应用”。
-
-## 构建与运行
-
-### 环境要求
-
-- Android Studio（建议使用与 Gradle 8.6 / Kotlin 2.0.21 兼容的版本）
-- Android SDK：
-  - `compileSdkVersion = 35`
-  - `targetSdkVersion = 35`
-  - `minSdkVersion = 31`
-
-当前 `app/build.gradle` 中的应用版本：
-
-- `versionCode = 2`
-- `versionName = "1.1"`
-
-### 构建调试版本
-
-在项目根目录执行：
+### 构建命令
+在项目根目录打开终端：
 
 ```bash
+# 构建调试版 APK
 ./gradlew assembleDebug
+
+# 构建正式版 APK
+./gradlew assembleRelease
 ```
 
-生成的调试 APK 位于：
+输出的 APK 文件位于：
+`app/build/outputs/apk/debug/app-debug.apk`
 
-- `app/build/outputs/apk/debug/app-debug.apk`
+## 📄 许可证
 
-可直接通过 Android Studio 运行到真机或模拟器。
+本项目开源。请参考仓库中的许可证文件（如有）。
 
-## 代码结构概览
-
-- `app/src/main/AndroidManifest.xml`  
-  应用入口、Activity 声明、TileService 声明、网络权限等。
-
-- `app/src/main/java/com/example/syncclipboard/SyncClipboardApi.kt`  
-  与服务器交互的最小 HTTP API：上传 / 下载文本、上传 / 下载文件、测试连接等。
-
-- `SettingsActivity.kt`  
-  服务器地址、用户名、密码配置界面，包含“测试连接”。
-
-- `ProgressActivity.kt`  
-  所有前台操作（上传 / 下载 / 文件传输 / 测试连接）的统一进度界面，包含：
-  - 文本上传 / 下载逻辑；
-  - 文件上传 / 下载、速度和进度文本；
-  - 文件同名冲突处理（替换 / 保留）；
-  - 下载完成后的“打开”按钮。
-
-- `ShareReceiveActivity.kt`  
-  系统“分享”入口，将文本或文件转发给 `ProgressActivity` 做上传。
-
-- `UploadClipboardTileService.kt` / `DownloadClipboardTileService.kt`  
-  快捷设置磁贴入口，各自绑定上传/下载操作，并使用对应图标。
-
-- `ConfigStorage.kt` / `UiStyleStorage.kt`  
-  使用 `SharedPreferences` 保存服务器配置和进度界面样式/行为。
-
-- `SyncClipboardApp.kt`  
-  `Application` 实现，用于启用 Material Dynamic Color（根据系统配色动态调整主题）。
-
-## 许可证
-
-当前仓库未在代码中显式声明许可证。如需开源或分发，请根据你的实际需求补充许可证信息。
+---
+*Created for personal use to bridge the gap between Android and PC clipboards.*

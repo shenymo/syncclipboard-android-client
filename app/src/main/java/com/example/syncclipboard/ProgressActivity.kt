@@ -35,7 +35,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,6 +94,8 @@ class ProgressActivity : AppCompatActivity() {
 
     private val statusTextState = mutableStateOf("")
     private val contentTextState = mutableStateOf<String?>(null)
+    private val isSuccessState = mutableStateOf(false)
+    private val isErrorState = mutableStateOf(false)
     private val actionButtonState = mutableStateOf<UiButton?>(null)
     private val replaceButtonState = mutableStateOf<UiButton?>(null)
     private val keepBothButtonState = mutableStateOf<UiButton?>(null)
@@ -190,8 +199,11 @@ class ProgressActivity : AppCompatActivity() {
 
                 overlayController = FloatingOverlayController(this).also { controller ->
                     controller.show(
+                        operation = operation,
                         statusTextState = statusTextState,
                         contentTextState = contentTextState,
+                        isSuccessState = isSuccessState,
+                        isErrorState = isErrorState,
                         actionButtonState = actionButtonState,
                         replaceButtonState = replaceButtonState,
                         keepBothButtonState = keepBothButtonState,
@@ -267,6 +279,7 @@ class ProgressActivity : AppCompatActivity() {
                     // 上传完成后只显示结果文字，不展示剪贴板内容
                     setStatusText(result.message)
                     setContentText(null)
+                    if (result.success) isSuccessState.value = true else isErrorState.value = true
 
                     // 对话框样式下可以额外弹出一条短 Toast；BottomSheet 已在界面内展示结果，无需 Toast
                     if (!useBottomSheet) {
@@ -275,6 +288,14 @@ class ProgressActivity : AppCompatActivity() {
                             result.message,
                             Toast.LENGTH_SHORT
                         ).show()
+                    }
+
+                    if (useFloatingWindow) {
+                        val delaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(this@ProgressActivity)
+                        if (delaySeconds > 0) {
+                            delay((delaySeconds * 1000).toLong())
+                            finish()
+                        }
                     }
                 }
             })
@@ -321,6 +342,7 @@ class ProgressActivity : AppCompatActivity() {
                 }
 
                 hideConflictButtons()
+                if (result.success) isSuccessState.value = true else isErrorState.value = true
 
                 // 下载剪贴板 / 文件：根据结果显示“已写入剪贴板”或“文件已下载”等文案
                 if (operation == OP_DOWNLOAD_CLIPBOARD) {
@@ -365,6 +387,14 @@ class ProgressActivity : AppCompatActivity() {
                         result.message,
                         Toast.LENGTH_SHORT
                     ).show()
+                }
+
+                if (useFloatingWindow) {
+                    val delaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(this@ProgressActivity)
+                    if (delaySeconds > 0) {
+                        delay((delaySeconds * 1000).toLong())
+                        finish()
+                    }
                 }
             }
         }
@@ -1096,8 +1126,11 @@ class ProgressActivity : AppCompatActivity() {
         private var params: WindowManager.LayoutParams? = null
 
         fun show(
+            operation: String,
             statusTextState: androidx.compose.runtime.State<String>,
             contentTextState: androidx.compose.runtime.State<String?>,
+            isSuccessState: androidx.compose.runtime.State<Boolean>,
+            isErrorState: androidx.compose.runtime.State<Boolean>,
             actionButtonState: androidx.compose.runtime.State<UiButton?>,
             replaceButtonState: androidx.compose.runtime.State<UiButton?>,
             keepBothButtonState: androidx.compose.runtime.State<UiButton?>,
@@ -1126,6 +1159,8 @@ class ProgressActivity : AppCompatActivity() {
                 setContent {
                     val statusText by rememberUpdatedState(statusTextState.value)
                     val contentText by rememberUpdatedState(contentTextState.value)
+                    val isSuccess by rememberUpdatedState(isSuccessState.value)
+                    val isError by rememberUpdatedState(isErrorState.value)
                     val actionButton by rememberUpdatedState(actionButtonState.value)
                     val replaceButton by rememberUpdatedState(replaceButtonState.value)
                     val keepBothButton by rememberUpdatedState(keepBothButtonState.value)
@@ -1134,13 +1169,21 @@ class ProgressActivity : AppCompatActivity() {
                         { dx: Float, dy: Float -> moveBy(dx, dy) }
                     }
 
+                    val longPressSeconds = remember {
+                        UiStyleStorage.loadLongPressCloseSeconds(activity)
+                    }
+
                     SyncClipboardTheme {
                         FloatingProgressCard(
+                            operation = operation,
                             statusText = statusText,
                             contentText = contentText,
+                            isSuccess = isSuccess,
+                            isError = isError,
                             actionButton = actionButton,
                             replaceButton = replaceButton,
                             keepBothButton = keepBothButton,
+                            longPressSeconds = longPressSeconds,
                             onMoveBy = moveHandler,
                             onClose = closeHandler
                         )
@@ -1176,80 +1219,92 @@ class ProgressActivity : AppCompatActivity() {
 
         @Composable
         private fun FloatingProgressCard(
+            operation: String,
             statusText: String,
             contentText: String?,
+            isSuccess: Boolean,
+            isError: Boolean,
             actionButton: UiButton?,
             replaceButton: UiButton?,
             keepBothButton: UiButton?,
+            longPressSeconds: Float,
             onMoveBy: (dx: Float, dy: Float) -> Unit,
             onClose: () -> Unit
         ) {
+            // Determine Icon
+            val iconVector = when {
+                isSuccess -> Icons.Default.Check
+                isError -> Icons.Default.Close
+                operation == OP_UPLOAD_CLIPBOARD || operation == OP_UPLOAD_FILE || operation == OP_UPLOAD_SHARED_TEXT -> Icons.Default.ArrowUpward
+                else -> Icons.Default.ArrowDownward
+            }
+
+            val iconColor = when {
+                isSuccess -> MaterialTheme.colorScheme.primary
+                isError -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+
             Surface(
                 modifier = Modifier
-                    .widthIn(min = 240.dp, max = 360.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                tonalElevation = 6.dp,
-                shadowElevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface
+                    .widthIn(min = 200.dp, max = 320.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                if (longPressSeconds > 0) {
+                                    try {
+                                        withTimeout((longPressSeconds * 1000).toLong()) {
+                                            awaitRelease()
+                                        }
+                                    } catch (e: TimeoutCancellationException) {
+                                        onClose()
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            onMoveBy(dragAmount.x, dragAmount.y)
+                        }
+                    },
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = activity.getString(R.string.app_name),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp)
                         )
-                        IconButton(onClick = onClose) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-                        }
-                    }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                detectDragGestures { _, dragAmount ->
-                                    onMoveBy(dragAmount.x, dragAmount.y)
-                                }
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Text(
-                            text = activity.getString(R.string.floating_window_drag_hint),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (!contentText.isNullOrEmpty()) {
-                        Text(
-                            text = contentText,
+                            text = if (!contentText.isNullOrEmpty()) contentText else statusText,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
                     if (actionButton != null) {
                         Button(
                             onClick = actionButton.onClick,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 0.dp, horizontal = 12.dp)
                         ) {
                             Text(text = actionButton.text)
                         }
@@ -1258,22 +1313,24 @@ class ProgressActivity : AppCompatActivity() {
                     if (replaceButton != null || keepBothButton != null) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (replaceButton != null) {
                                 Button(
                                     onClick = replaceButton.onClick,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                                 ) {
-                                    Text(text = replaceButton.text)
+                                    Text(text = replaceButton.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                             if (keepBothButton != null) {
                                 OutlinedButton(
                                     onClick = keepBothButton.onClick,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                                 ) {
-                                    Text(text = keepBothButton.text)
+                                    Text(text = keepBothButton.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
