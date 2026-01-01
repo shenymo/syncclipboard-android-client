@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.PixelFormat
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -21,7 +23,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import androidx.annotation.ColorInt
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -51,8 +55,11 @@ class FloatingOverlayService : LifecycleService() {
 
     private var overlayView: View? = null
     private var params: WindowManager.LayoutParams? = null
+    private var overlayCardView: View? = null
     private var textContainerView: View? = null
-    private var iconView: ImageView? = null
+    private var blurBackgroundView: View? = null
+    private var iconUploadView: ImageView? = null
+    private var iconDownloadView: ImageView? = null
     private var statusView: TextView? = null
     private var contentView: TextView? = null
     private var conflictActionsView: View? = null
@@ -80,6 +87,7 @@ class FloatingOverlayService : LifecycleService() {
     private var startX = 0
     private var startY = 0
     private var dragging = false
+    private var hasUserMovedOverlay = false
 
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
@@ -577,14 +585,17 @@ class FloatingOverlayService : LifecycleService() {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
-            y = 120
+            y = defaultOverlayY()
         }
 
         val root = LayoutInflater.from(this).inflate(R.layout.view_floating_overlay, null, false)
+        val card = root.findViewById<View>(R.id.floating_overlay_card)
+        val blurBg = root.findViewById<View>(R.id.floating_overlay_blur_bg)
         val textContainer = root.findViewById<View>(R.id.floating_overlay_text_container)
-        val icon = root.findViewById<ImageView>(R.id.floating_overlay_icon)
+        val iconUpload = root.findViewById<ImageView>(R.id.floating_overlay_icon_upload)
+        val iconDownload = root.findViewById<ImageView>(R.id.floating_overlay_icon_download)
         val status = root.findViewById<TextView>(R.id.floating_overlay_status)
         val content = root.findViewById<TextView>(R.id.floating_overlay_content)
         val conflictActions = root.findViewById<View>(R.id.floating_overlay_conflict_actions)
@@ -599,8 +610,11 @@ class FloatingOverlayService : LifecycleService() {
             windowManager.addView(root, overlayParams)
             overlayView = root
             params = overlayParams
+            overlayCardView = card
+            blurBackgroundView = blurBg
             textContainerView = textContainer
-            iconView = icon
+            iconUploadView = iconUpload
+            iconDownloadView = iconDownload
             statusView = status
             contentView = content
             conflictActionsView = conflictActions
@@ -610,12 +624,17 @@ class FloatingOverlayService : LifecycleService() {
             resultActionsView = resultActions
             btnOpen = openButton
             resultActions.visibility = View.GONE
+            hasUserMovedOverlay = false
 
             replaceButton.setOnClickListener { pendingConflictDecision.set(FileConflictDecision.REPLACE) }
             renameSaveButton.setOnClickListener { pendingConflictDecision.set(FileConflictDecision.RENAME_SAVE) }
             openButton.setOnClickListener { openDownloadedFile() }
 
             applyExpandedState()
+            root.post {
+                resizeBlurBackgroundToOverlay()
+                applyGlassBlurIfSupported()
+            }
         } catch (_: Exception) {
             stopSelf()
             return
@@ -626,6 +645,7 @@ class FloatingOverlayService : LifecycleService() {
         isExpanded = !isExpanded
         applyExpandedState()
         updateOverlayViews()
+        requestOverlayWindowResize()
     }
 
     private fun applyExpandedState() {
@@ -653,7 +673,20 @@ class FloatingOverlayService : LifecycleService() {
         }
 
         container?.requestLayout()
+        overlayCardView?.requestLayout()
         overlayView?.requestLayout()
+        requestOverlayWindowResize()
+    }
+
+    private fun requestOverlayWindowResize() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post { requestOverlayWindowResize() }
+            return
+        }
+        val root = overlayView ?: return
+        val currentParams = params ?: return
+        runCatching { windowManager.updateViewLayout(root, currentParams) }
+        overlayCardView?.post { resizeBlurBackgroundToOverlay() }
     }
 
     private fun applyTextBehaviorCollapsed(view: TextView) {
@@ -704,6 +737,7 @@ class FloatingOverlayService : LifecycleService() {
                     longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                 }
                 if (dragging) {
+                    hasUserMovedOverlay = true
                     currentParams.x = (startX + dx.toInt()).coerceAtLeast(0)
                     currentParams.y = (startY + dy.toInt()).coerceAtLeast(0)
                     overlayView?.let {
@@ -756,23 +790,25 @@ class FloatingOverlayService : LifecycleService() {
             return
         }
 
-        val icon = iconView ?: return
+        val iconUpload = iconUploadView ?: return
+        val iconDownload = iconDownloadView ?: return
         val status = statusView ?: return
         val content = contentView ?: return
 
-        val iconRes = if (operation == SyncOperation.DOWNLOAD_CLIPBOARD) {
-            R.drawable.ic_qs_download
-        } else {
-            R.drawable.ic_qs_upload
-        }
-        icon.setImageResource(iconRes)
-
-        val tintColor = when {
+        val accentColor = when {
             isSuccess -> ContextCompat.getColor(this, android.R.color.holo_green_dark)
             isError -> ContextCompat.getColor(this, android.R.color.holo_red_dark)
-            else -> ContextCompat.getColor(this, android.R.color.black)
+            else -> ContextCompat.getColor(this, android.R.color.white)
         }
-        icon.imageTintList = ColorStateList.valueOf(tintColor)
+        val inactiveColor = ContextCompat.getColor(this, android.R.color.darker_gray)
+        val isDownload = operation == SyncOperation.DOWNLOAD_CLIPBOARD
+        applyIconState(
+            uploadView = iconUpload,
+            downloadView = iconDownload,
+            isDownloadOperation = isDownload,
+            activeColor = accentColor,
+            inactiveColor = inactiveColor
+        )
 
         status.text = (if (isExpanded) statusExpandedText else statusCompactText).ifBlank { "准备中…" }
         val raw = contentRawText?.takeIf { it.isNotBlank() }
@@ -794,8 +830,11 @@ class FloatingOverlayService : LifecycleService() {
         val current = overlayView ?: return
         overlayView = null
         params = null
+        overlayCardView = null
+        blurBackgroundView = null
         textContainerView = null
-        iconView = null
+        iconUploadView = null
+        iconDownloadView = null
         statusView = null
         contentView = null
         conflictActionsView = null
@@ -809,6 +848,54 @@ class FloatingOverlayService : LifecycleService() {
             windowManager.removeView(current)
         } catch (_: Exception) {
         }
+    }
+
+    private fun defaultOverlayY(): Int {
+        val statusBarHeight = runCatching {
+            val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+            if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
+        }.getOrDefault(0)
+        return statusBarHeight + dpToPx(12)
+    }
+
+    private fun applyGlassBlurIfSupported() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        val blurBg = blurBackgroundView ?: return
+        val radius = dpToPx(14).toFloat()
+        runCatching {
+            blurBg.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
+        }
+    }
+
+    private fun resizeBlurBackgroundToOverlay() {
+        val root = overlayCardView ?: return
+        val blurBg = blurBackgroundView ?: return
+        val width = root.width
+        val height = root.height
+        if (width <= 0 || height <= 0) return
+
+        val current = blurBg.layoutParams
+        if (current != null && current.width == width && current.height == height) return
+
+        blurBg.layoutParams = FrameLayout.LayoutParams(width, height)
+        blurBg.requestLayout()
+    }
+
+    private fun applyIconState(
+        uploadView: ImageView,
+        downloadView: ImageView,
+        isDownloadOperation: Boolean,
+        @ColorInt activeColor: Int,
+        @ColorInt inactiveColor: Int
+    ) {
+        val activeView = if (isDownloadOperation) downloadView else uploadView
+        val inactiveView = if (isDownloadOperation) uploadView else downloadView
+
+        activeView.imageTintList = ColorStateList.valueOf(activeColor)
+        activeView.alpha = 1.0f
+
+        inactiveView.imageTintList = ColorStateList.valueOf(inactiveColor)
+        inactiveView.alpha = 0.6f
     }
 
     companion object {
