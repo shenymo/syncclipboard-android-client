@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 
 /**
  * 仅用于从快捷设置磁贴触发时短暂获取前台焦点，读取系统剪贴板内容后立刻退出。
@@ -51,7 +50,7 @@ class ClipboardBridgeActivity : AppCompatActivity() {
             val intent = Intent(this, FloatingOverlayService::class.java).apply {
                 action = FloatingOverlayService.ACTION_DOWNLOAD_CLIPBOARD
             }
-            ContextCompat.startForegroundService(this, intent)
+            startService(intent)
             finish()
             overridePendingTransition(0, 0)
             return
@@ -89,7 +88,7 @@ class ClipboardBridgeActivity : AppCompatActivity() {
                 action = FloatingOverlayService.ACTION_UPLOAD_TEXT
                 putExtra(FloatingOverlayService.EXTRA_TEXT, text)
             }
-            ContextCompat.startForegroundService(this, intent)
+            startService(intent)
 
             finish()
             overridePendingTransition(0, 0)

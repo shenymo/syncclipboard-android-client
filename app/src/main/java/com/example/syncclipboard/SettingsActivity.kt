@@ -86,7 +86,6 @@ private fun SettingsScreen() {
         }
         longPressCloseSeconds = UiStyleStorage.loadLongPressCloseSeconds(context)
         autoCloseDelaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(context)
-        UiStyleStorage.saveProgressStyle(context, UiStyleStorage.STYLE_FLOATING_WINDOW)
     }
 
     fun openOverlayPermissionSettings() {
@@ -187,7 +186,7 @@ private fun SettingsScreen() {
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "长按关闭时间: ${String.format(\"%.1f\", longPressCloseSeconds)} 秒",
+                text = "长按关闭时间: ${String.format("%.1f", longPressCloseSeconds)} 秒",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
@@ -201,7 +200,7 @@ private fun SettingsScreen() {
             )
 
             Text(
-                text = "自动关闭延迟: ${String.format(\"%.1f\", autoCloseDelaySeconds)} 秒",
+                text = "自动关闭延迟: ${String.format("%.1f", autoCloseDelaySeconds)} 秒",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(

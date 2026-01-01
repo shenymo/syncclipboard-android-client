@@ -9,7 +9,6 @@ import android.provider.OpenableColumns
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 
 /**
  * 系统分享入口：
@@ -57,7 +56,7 @@ class ShareReceiveActivity : AppCompatActivity() {
             action = FloatingOverlayService.ACTION_UPLOAD_TEXT
             putExtra(FloatingOverlayService.EXTRA_TEXT, sharedText)
         }
-        ContextCompat.startForegroundService(this, intent)
+        startService(intent)
     }
 
     private fun handleSendFile() {
@@ -84,7 +83,7 @@ class ShareReceiveActivity : AppCompatActivity() {
             putExtra(FloatingOverlayService.EXTRA_FILE_URI, uri.toString())
             putExtra(FloatingOverlayService.EXTRA_FILE_NAME, fileName)
         }
-        ContextCompat.startForegroundService(this, intent)
+        startService(intent)
     }
 
     private fun resolveFileName(uri: Uri): String? {

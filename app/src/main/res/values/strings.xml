@@ -28,11 +28,6 @@
     <string name="toast_upload_file_success">已上传文件</string>
     <string name="toast_download_file_success">文件已下载</string>
 
-    <!-- 对话框标题/提示 -->
-    <string name="dialog_upload_clipboard_title">当前剪贴板内容</string>
-    <string name="dialog_upload_failed_title">上传剪贴板失败</string>
-    <string name="dialog_download_failed_title">写入剪贴板失败</string>
-
     <string name="error_file_missing">未找到要上传的文件。</string>
     <string name="error_file_open_failed">无法打开要上传的文件。</string>
     <string name="error_file_upload_failed">上传文件失败。</string>
@@ -43,20 +38,11 @@
     <string name="error_clipboard_empty">当前剪贴板没有文本。</string>
     <string name="error_server_not_text">服务器当前剪贴板不是文本类型。</string>
 
-    <!-- 设置界面：进度界面样式 -->
+    <!-- 设置界面：进度界面样式（仅保留悬浮窗） -->
     <string name="settings_ui_style_title">进度界面样式</string>
-    <string name="settings_ui_style_dialog">对话框样式</string>
-    <string name="settings_ui_style_bottom_sheet">底部弹出样式 (BottomSheet)</string>
     <string name="settings_ui_style_floating_window">悬浮窗样式</string>
-    <string name="settings_ui_style_notification">通知样式</string>
     <string name="settings_overlay_permission_required">需要授予“在其他应用上层显示”权限后才能使用悬浮窗。</string>
-    <string name="settings_notification_permission_required">需要授予“通知”权限后才能使用通知样式。</string>
-    <string name="button_grant_overlay_permission">授予悬浮窗权限</string>
     <string name="floating_window_drag_hint">拖动此处移动悬浮窗</string>
-
-    <!-- 设置界面：BottomSheet 点击外部是否关闭 -->
-    <string name="settings_bottom_sheet_behavior_title">BottomSheet 行为</string>
-    <string name="settings_bottom_sheet_cancel_on_touch_outside">点击空白处关闭底部弹窗</string>
 
     <!-- 按钮：打开刚刚下载的文件 -->
     <string name="button_open_file">打开</string>
@@ -66,12 +52,4 @@
     <string name="button_replace">替换</string>
     <string name="button_keep_both">保留</string>
     <string name="button_rename_save">重命名保存</string>
-
-    <!-- 通知样式：操作按钮 -->
-    <string name="notification_action_start_upload">开始上传</string>
-    <string name="notification_action_cancel">取消</string>
-    <string name="notification_action_close">关闭</string>
-    <string name="notification_action_open_file">打开</string>
-    <string name="notification_action_replace">替换</string>
-    <string name="notification_action_keep_both">保留</string>
 </resources>

@@ -1,9 +1,5 @@
 package com.example.syncclipboard
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.database.Cursor
@@ -13,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.PixelFormat
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -30,7 +25,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -54,7 +48,6 @@ class FloatingOverlayService : LifecycleService() {
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private val mainHandler = Handler(Looper.getMainLooper())
     private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
-    private val notificationManager by lazy { getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
     private var overlayView: View? = null
     private var params: WindowManager.LayoutParams? = null
@@ -81,12 +74,6 @@ class FloatingOverlayService : LifecycleService() {
     private var lastDownloadedFileUri: Uri? = null
     private var lastDownloadedFileName: String? = null
 
-    private var notificationChannelCreated: Boolean = false
-    private var lastNotifiedContent: String? = null
-    private var lastNotifyAtMs: Long = 0L
-    private var pendingNotifyRunnable: Runnable? = null
-    private var pendingNotifyContent: String? = null
-
     private var longPressRunnable: Runnable? = null
     private var downX = 0f
     private var downY = 0f
@@ -97,8 +84,6 @@ class FloatingOverlayService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        ensureForeground()
-
         when (intent?.action) {
             ACTION_UPLOAD_TEXT -> startUploadText(intent.getStringExtra(EXTRA_TEXT).orEmpty())
             ACTION_UPLOAD_FILE -> {
@@ -114,8 +99,6 @@ class FloatingOverlayService : LifecycleService() {
 
     override fun onDestroy() {
         hideOverlay()
-        pendingNotifyRunnable?.let { mainHandler.removeCallbacks(it) }
-        pendingNotifyRunnable = null
         super.onDestroy()
     }
 
@@ -128,20 +111,17 @@ class FloatingOverlayService : LifecycleService() {
     private fun setStatus(compact: String, expanded: String = compact) {
         statusCompactText = compact
         statusExpandedText = expanded
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
     }
 
     private fun setContent(text: String?) {
         contentRawText = text
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
     }
 
     private fun setState(success: Boolean, error: Boolean) {
         isSuccess = success
         isError = error
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
     }
 
@@ -152,7 +132,7 @@ class FloatingOverlayService : LifecycleService() {
         }
 
         currentJob?.cancel()
-        operation = ProgressActivity.OP_UPLOAD_CLIPBOARD
+        operation = SyncOperation.UPLOAD_CLIPBOARD
         isSuccess = false
         isError = false
         isExpanded = false
@@ -164,7 +144,6 @@ class FloatingOverlayService : LifecycleService() {
         contentRawText = text
 
         showOverlay()
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
 
         currentJob = lifecycleScope.launch {
@@ -213,7 +192,7 @@ class FloatingOverlayService : LifecycleService() {
 
     private fun startUploadFile(uriString: String, fileName: String) {
         currentJob?.cancel()
-        operation = ProgressActivity.OP_UPLOAD_FILE
+        operation = SyncOperation.UPLOAD_FILE
         isSuccess = false
         isError = false
         isExpanded = false
@@ -225,7 +204,6 @@ class FloatingOverlayService : LifecycleService() {
         contentRawText = fileName.ifBlank { null }
 
         showOverlay()
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
 
         if (uriString.isBlank()) {
@@ -335,7 +313,7 @@ class FloatingOverlayService : LifecycleService() {
 
     private fun startDownloadClipboard() {
         currentJob?.cancel()
-        operation = ProgressActivity.OP_DOWNLOAD_CLIPBOARD
+        operation = SyncOperation.DOWNLOAD_CLIPBOARD
         isSuccess = false
         isError = false
         isExpanded = false
@@ -347,7 +325,6 @@ class FloatingOverlayService : LifecycleService() {
         contentRawText = null
 
         showOverlay()
-        requestForegroundNotificationUpdate()
         updateOverlayViews()
 
         currentJob = lifecycleScope.launch {
@@ -783,7 +760,7 @@ class FloatingOverlayService : LifecycleService() {
         val status = statusView ?: return
         val content = contentView ?: return
 
-        val iconRes = if (operation == ProgressActivity.OP_DOWNLOAD_CLIPBOARD) {
+        val iconRes = if (operation == SyncOperation.DOWNLOAD_CLIPBOARD) {
             R.drawable.ic_qs_download
         } else {
             R.drawable.ic_qs_upload
@@ -808,7 +785,7 @@ class FloatingOverlayService : LifecycleService() {
         val conflictVisible = conflictActionsView?.visibility == View.VISIBLE
         if (!conflictVisible) {
             val shouldShowOpen =
-                isSuccess && operation == ProgressActivity.OP_DOWNLOAD_CLIPBOARD && lastDownloadedFileUri != null
+                isSuccess && operation == SyncOperation.DOWNLOAD_CLIPBOARD && lastDownloadedFileUri != null
             resultActionsView?.visibility = if (shouldShowOpen) View.VISIBLE else View.GONE
         }
     }
@@ -834,77 +811,6 @@ class FloatingOverlayService : LifecycleService() {
         }
     }
 
-    private fun ensureForeground() {
-        createNotificationChannelIfNeeded()
-        val notification = buildForegroundNotification(
-            title = getString(R.string.app_name),
-            content = statusCompactText.ifEmpty { getString(R.string.settings_ui_style_title) }
-        )
-        startForeground(NOTIFICATION_ID, notification)
-        lastNotifiedContent = statusCompactText
-        lastNotifyAtMs = System.currentTimeMillis()
-    }
-
-    private fun requestForegroundNotificationUpdate() {
-        val content = statusCompactText.ifEmpty { getString(R.string.settings_ui_style_title) }
-        if (content == lastNotifiedContent && pendingNotifyRunnable == null) return
-
-        pendingNotifyContent = content
-        val now = System.currentTimeMillis()
-        val elapsed = now - lastNotifyAtMs
-        val delayMs = (MIN_NOTIFY_INTERVAL_MS - elapsed).coerceAtLeast(0L)
-
-        if (pendingNotifyRunnable != null) return
-        pendingNotifyRunnable = Runnable {
-            pendingNotifyRunnable = null
-            val pendingContent = pendingNotifyContent ?: return@Runnable
-            pendingNotifyContent = null
-            if (pendingContent == lastNotifiedContent) return@Runnable
-            createNotificationChannelIfNeeded()
-            notificationManager.notify(
-                NOTIFICATION_ID,
-                buildForegroundNotification(
-                    title = getString(R.string.app_name),
-                    content = pendingContent
-                )
-            )
-            lastNotifiedContent = pendingContent
-            lastNotifyAtMs = System.currentTimeMillis()
-        }
-        mainHandler.postDelayed(pendingNotifyRunnable!!, delayMs)
-    }
-
-    private fun buildForegroundNotification(title: String, content: String): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, SettingsActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .build()
-    }
-
-    private fun createNotificationChannelIfNeeded() {
-        if (notificationChannelCreated) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                "SyncClipboard",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
-        notificationChannelCreated = true
-    }
-
     companion object {
         const val ACTION_UPLOAD_TEXT = "com.example.syncclipboard.action.UPLOAD_TEXT"
         const val ACTION_UPLOAD_FILE = "com.example.syncclipboard.action.UPLOAD_FILE"
@@ -912,10 +818,6 @@ class FloatingOverlayService : LifecycleService() {
         const val EXTRA_TEXT = "extra_text"
         const val EXTRA_FILE_URI = "file_uri"
         const val EXTRA_FILE_NAME = "file_name"
-
-        private const val NOTIFICATION_CHANNEL_ID = "syncclipboard_overlay"
-        private const val NOTIFICATION_ID = 1001
-        private const val MIN_NOTIFY_INTERVAL_MS = 350L
     }
 }
 
