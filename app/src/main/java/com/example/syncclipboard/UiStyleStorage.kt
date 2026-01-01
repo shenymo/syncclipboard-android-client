@@ -9,6 +9,7 @@ import android.content.Context
  */
 object UiStyleStorage {
 
+    private const val PREF_NAME = "ui_style_prefs"
     private const val KEY_PROGRESS_STYLE = "progress_style"
     private const val KEY_BOTTOM_SHEET_CANCEL_OUTSIDE = "bottom_sheet_cancel_outside"
     private const val KEY_LONG_PRESS_CLOSE_SECONDS = "long_press_close_seconds"

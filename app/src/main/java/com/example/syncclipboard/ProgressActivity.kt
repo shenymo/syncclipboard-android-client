@@ -191,6 +191,13 @@ class ProgressActivity : AppCompatActivity() {
 
             try {
                 // 保持 Activity 处于前台，但不接管触摸：触摸交给悬浮窗与底层应用
+                // 将 Activity 窗口最小化，防止全屏透明遮罩阻挡点击
+                val params = window.attributes
+                params.width = 1
+                params.height = 1
+                params.alpha = 0f
+                window.attributes = params
+
                 window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
                 window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 // 确保不压暗底层界面
@@ -211,7 +218,7 @@ class ProgressActivity : AppCompatActivity() {
                     )
                 }
 
-                setContent { SyncClipboardTheme { Box(modifier = Modifier.fillMaxSize()) } }
+                setContent { SyncClipboardTheme { Box(modifier = Modifier.size(1.dp)) } }
             } catch (e: Exception) {
                 Toast.makeText(
                     this,
@@ -272,8 +279,19 @@ class ProgressActivity : AppCompatActivity() {
                 setContentText(null)
 
                 lifecycleScope.launch {
+                    if (useFloatingWindow) {
+                        // Temporarily gain focus to read clipboard on Android 10+
+                        overlayController?.setFocusable(true)
+                        delay(100)
+                    }
+
                     val result = withContext(Dispatchers.IO) {
                         performOperation(OP_UPLOAD_CLIPBOARD)
+                    }
+
+                    if (useFloatingWindow) {
+                        // Restore non-focusable state to allow clicking behind
+                        overlayController?.setFocusable(false)
                     }
 
                     // 上传完成后只显示结果文字，不展示剪贴板内容
@@ -1138,6 +1156,8 @@ class ProgressActivity : AppCompatActivity() {
         ) {
             if (view != null) return
 
+            // Default: NOT_FOCUSABLE (allows click-through to app behind)
+            // We will temporarily remove this flag when reading clipboard.
             val overlayParams = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -1156,6 +1176,16 @@ class ProgressActivity : AppCompatActivity() {
                 setViewTreeLifecycleOwner(activity)
                 setViewTreeViewModelStoreOwner(activity)
                 setViewTreeSavedStateRegistryOwner(activity)
+                // Consume Back key to close overlay
+                isFocusableInTouchMode = true
+                setOnKeyListener { _, keyCode, event ->
+                    if (event.action == android.view.KeyEvent.ACTION_UP && keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+                        onClose()
+                        true
+                    } else {
+                        false
+                    }
+                }
                 setContent {
                     val statusText by rememberUpdatedState(statusTextState.value)
                     val contentText by rememberUpdatedState(contentTextState.value)
@@ -1194,6 +1224,20 @@ class ProgressActivity : AppCompatActivity() {
             windowManager.addView(composeView, overlayParams)
             view = composeView
             params = overlayParams
+        }
+
+        fun setFocusable(focusable: Boolean) {
+            val currentView = view ?: return
+            val currentParams = params ?: return
+            if (focusable) {
+                currentParams.flags = currentParams.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+            } else {
+                currentParams.flags = currentParams.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            }
+            try {
+                windowManager.updateViewLayout(currentView, currentParams)
+            } catch (_: Exception) {
+            }
         }
 
         fun hide() {
