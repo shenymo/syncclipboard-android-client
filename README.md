@@ -2,7 +2,7 @@
 
 一个用于 **SyncClipboard** 系统的 Android 客户端：在 Android 设备与 SyncClipboard 服务端之间同步剪贴板内容，支持文本与文件（通过分享/下载）。
 
-本仓库仅包含 Android 客户端。服务端请参考（或部署兼容实现）：https://github.com/DGP-Studio/SyncClipboard
+本仓库仅包含 Android 客户端。服务端请参考（或部署兼容实现）：https://github.com/Jeric-X/SyncClipboard
 
 ## 目录
 
