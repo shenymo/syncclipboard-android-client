@@ -91,6 +91,10 @@ object SyncClipboardApi {
             connRef.get()?.closeQuietly()
             future.cancel(true)
             ApiResult(success = false, errorMessage = "网络请求超时")
+        } catch (e: InterruptedException) {
+            connRef.get()?.closeQuietly()
+            future.cancel(true)
+            throw e
         } catch (e: ExecutionException) {
             throw (e.cause ?: e)
         }
@@ -122,6 +126,8 @@ object SyncClipboardApi {
 
                 val code = conn.responseCode
                 if (code in 200..299) {
+                    // 显式消耗并关闭输入流，防止 StrictMode 警告 "reachable from finalizer"
+                    runCatching { conn.inputStream.close() }
                     ApiResult(success = true)
                 } else {
                     val message = readStreamAsString(conn.errorStream)
@@ -293,6 +299,8 @@ object SyncClipboardApi {
                     val syncCode = syncConn.responseCode
                     if (syncCode in 200..299) {
                         onStage?.invoke(UploadFileStage.DONE)
+                        // 显式关闭输入流
+                        runCatching { syncConn.inputStream.close() }
                         ApiResult(success = true)
                     } else {
                         val message = readStreamAsString(syncConn.errorStream)

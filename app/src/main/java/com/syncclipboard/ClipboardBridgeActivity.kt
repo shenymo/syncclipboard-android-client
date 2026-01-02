@@ -24,7 +24,17 @@ class ClipboardBridgeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 透明/无界面 Activity：尽量减少对用户的打断
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
+    }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        handled = false
         mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_UPLOAD
 
         if (!PermissionUtils.checkOverlayPermission(this)) {
@@ -37,19 +47,30 @@ class ClipboardBridgeActivity : AppCompatActivity() {
 
         if (mode == MODE_DOWNLOAD) {
             handled = true
-            val intent = Intent(this, FloatingOverlayService::class.java).apply {
+            val serviceIntent = Intent(this, FloatingOverlayService::class.java).apply {
                 action = FloatingOverlayService.ACTION_DOWNLOAD_CLIPBOARD
             }
-            startService(intent)
+            startService(serviceIntent)
             finish()
             overridePendingTransition(0, 0)
             return
+        }
+        
+        // If we already have focus (e.g. from onNewIntent), try to process immediately
+        if (hasWindowFocus()) {
+            processUpload()
         }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus || handled) return
+        if (hasFocus) {
+            processUpload()
+        }
+    }
+
+    private fun processUpload() {
+        if (handled) return
         if (mode != MODE_UPLOAD) return
         handled = true
 

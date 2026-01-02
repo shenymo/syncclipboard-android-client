@@ -21,101 +21,113 @@
             android:background="@android:color/transparent" />
 
         <LinearLayout
-            android:id="@+id/floating_overlay_content_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingTop="16dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="16dp">
-
-        <FrameLayout
-            android:id="@+id/floating_overlay_icon_container"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="16dp"
-            android:background="@drawable/bg_icon_circle"
-            android:padding="8dp">
-
-            <ImageView
-                android:id="@+id/floating_overlay_icon_upload"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_qs_upload" />
-
-            <ImageView
-                android:id="@+id/floating_overlay_icon_download"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_qs_download" />
-        </FrameLayout>
-
-        <LinearLayout
-            android:id="@+id/floating_overlay_text_container"
-            android:layout_width="240dp"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/floating_overlay_status"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/floating_overlay_content_container"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="marquee"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:marqueeRepeatLimit="marquee_forever"
-                android:singleLine="true"
-                android:textColor="#FFFFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:paddingStart="20dp"
+                android:paddingTop="16dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/floating_overlay_content"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:ellipsize="marquee"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:marqueeRepeatLimit="marquee_forever"
-                android:singleLine="true"
-                android:textColor="#CCFFFFFF"
-                android:textSize="12sp" />
+                <FrameLayout
+                    android:id="@+id/floating_overlay_icon_container"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_icon_circle"
+                    android:padding="8dp">
 
-            <ProgressBar
-                android:id="@+id/floating_overlay_progress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginTop="8dp"
-                android:progressDrawable="@drawable/progress_bar_horizontal_glass"
-                android:visibility="gone"
-                android:max="100" />
+                    <ImageView
+                        android:id="@+id/floating_overlay_icon_upload"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_qs_upload" />
 
+                    <ImageView
+                        android:id="@+id/floating_overlay_icon_download"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_qs_download" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:id="@+id/floating_overlay_text_container"
+                    android:layout_width="240dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/floating_overlay_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="marquee"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:marqueeRepeatLimit="marquee_forever"
+                        android:singleLine="true"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/floating_overlay_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="marquee"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:marqueeRepeatLimit="marquee_forever"
+                        android:singleLine="true"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="12sp" />
+
+                    <ProgressBar
+                        android:id="@+id/floating_overlay_progress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:progressDrawable="@drawable/progress_bar_horizontal_glass"
+                        android:visibility="gone"
+                        android:max="100" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Buttons moved outside text container -->
             <LinearLayout
                 android:id="@+id/floating_overlay_conflict_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="end"
+                android:layout_marginBottom="16dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:gravity="center"
                 android:orientation="horizontal"
                 android:visibility="gone">
 
                 <Button
                     android:id="@+id/floating_overlay_btn_replace"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minHeight="36dp"
                     android:text="@string/button_replace" />
 
                 <Button
                     android:id="@+id/floating_overlay_btn_rename_save"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:minHeight="36dp"
@@ -126,8 +138,8 @@
                 android:id="@+id/floating_overlay_result_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="end"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
                 android:orientation="horizontal"
                 android:visibility="gone">
 
@@ -136,9 +148,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:minHeight="36dp"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
                     android:text="@string/button_open_file" />
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
     </FrameLayout>
 </FrameLayout>

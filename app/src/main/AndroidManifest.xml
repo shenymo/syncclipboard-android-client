@@ -32,6 +32,7 @@
             android:theme="@style/Theme.SyncClipboard.TransparentHost"
             android:excludeFromRecents="true"
             android:noHistory="true"
+            android:launchMode="singleTop"
             android:taskAffinity="com.syncclipboard.qs" />
 
         <activity

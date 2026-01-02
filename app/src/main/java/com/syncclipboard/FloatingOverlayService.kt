@@ -86,6 +86,7 @@ class FloatingOverlayService : LifecycleService() {
     private var isExpanded: Boolean = false
 
     private var currentJob: Job? = null
+    private var autoCloseJob: Job? = null
     private val pendingConflictDecision = AtomicReference<FileConflictDecision?>(null)
     private var lastDownloadedFileUri: Uri? = null
     private var lastDownloadedFileName: String? = null
@@ -102,7 +103,8 @@ class FloatingOverlayService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (isClosing) return START_NOT_STICKY
+        cancelAutoClose()
+        
         when (intent?.action) {
             ACTION_UPLOAD_TEXT -> startUploadText(intent.getStringExtra(EXTRA_TEXT).orEmpty())
             ACTION_UPLOAD_FILE -> {
@@ -114,6 +116,19 @@ class FloatingOverlayService : LifecycleService() {
             else -> animateAndStopSelf()
         }
         return START_NOT_STICKY
+    }
+    
+    private fun cancelAutoClose() {
+        autoCloseJob?.cancel()
+        autoCloseJob = null
+        if (isClosing) {
+            isClosing = false
+            val card = overlayCardView ?: return
+            card.animate().cancel()
+            card.alpha = 1f
+            card.scaleX = 1f
+            card.scaleY = 1f
+        }
     }
 
     override fun onDestroy() {
@@ -612,7 +627,9 @@ class FloatingOverlayService : LifecycleService() {
         if (!allowAutoClose) return
         val delaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(this)
         if (delaySeconds <= 0f) return
-        lifecycleScope.launch {
+        
+        autoCloseJob?.cancel()
+        autoCloseJob = lifecycleScope.launch {
             delay((delaySeconds * 1000).toLong())
             animateAndStopSelf()
         }

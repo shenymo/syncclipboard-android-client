@@ -18,9 +18,11 @@ object FileTransferUtils {
 
     fun findExistingDownloadEntry(resolver: ContentResolver, fileName: String): Uri? {
         val projection = arrayOf(
-            MediaStore.Downloads._ID,
-            MediaStore.Downloads.DISPLAY_NAME
+            MediaStore.Downloads._ID
         )
+        // 简化查询条件，只匹配文件名。
+        // 在 Android 11+ 上，MediaStore 会自动过滤应用不可见的文件，
+        // 只要能查到结果，通常就是我们有权覆盖或处理的文件。
         val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
         val selectionArgs = arrayOf(fileName)
 
@@ -29,7 +31,7 @@ object FileTransferUtils {
             projection,
             selection,
             selectionArgs,
-            null
+            "${MediaStore.Downloads.DATE_ADDED} DESC"
         )?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val idIndex = cursor.getColumnIndex(MediaStore.Downloads._ID)

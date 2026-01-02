@@ -68,19 +68,17 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     private fun resolveFileName(uri: Uri): String? {
         if (uri.scheme != ContentResolver.SCHEME_CONTENT) return null
-        var cursor: Cursor? = null
         return try {
-            cursor = contentResolver.query(uri, null, null, null, null)
-            if (cursor != null && cursor.moveToFirst()) {
-                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (index >= 0) cursor.getString(index) else null
-            } else {
-                null
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else {
+                    null
+                }
             }
         } catch (_: Exception) {
             null
-        } finally {
-            cursor?.close()
         }
     }
 }
