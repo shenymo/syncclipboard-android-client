@@ -27,19 +27,9 @@ class ClipboardBridgeActivity : AppCompatActivity() {
 
         mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_UPLOAD
 
-        if (!Settings.canDrawOverlays(this)) {
+        if (!PermissionUtils.checkOverlayPermission(this)) {
             handled = true
-            Toast.makeText(
-                this,
-                getString(R.string.settings_overlay_permission_required),
-                Toast.LENGTH_SHORT
-            ).show()
-            startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            PermissionUtils.requestOverlayPermission(this)
             finish()
             overridePendingTransition(0, 0)
             return

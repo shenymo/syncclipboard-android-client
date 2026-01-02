@@ -382,14 +382,4 @@ object SyncClipboardApi {
             null
         }
     }
-
-    // 复制流的通用工具目前只用于无进度场景，保留以备后续使用。
-    private fun copyStream(input: InputStream, output: OutputStream) {
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (true) {
-            val count = input.read(buffer)
-            if (count <= 0) break
-            output.write(buffer, 0, count)
-        }
-    }
 }

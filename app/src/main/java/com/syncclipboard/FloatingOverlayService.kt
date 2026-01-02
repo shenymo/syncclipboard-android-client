@@ -183,7 +183,7 @@ class FloatingOverlayService : LifecycleService() {
         }
 
         currentJob?.cancel()
-        operation = SyncOperation.UPLOAD_CLIPBOARD
+        operation = OP_UPLOAD_CLIPBOARD
         isSuccess = false
         isError = false
         isExpanded = false
@@ -243,7 +243,7 @@ class FloatingOverlayService : LifecycleService() {
 
     private fun startUploadFile(uriString: String, fileName: String) {
         currentJob?.cancel()
-        operation = SyncOperation.UPLOAD_FILE
+        operation = OP_UPLOAD_FILE
         isSuccess = false
         isError = false
         isExpanded = false
@@ -365,7 +365,7 @@ class FloatingOverlayService : LifecycleService() {
 
     private fun startDownloadClipboard() {
         currentJob?.cancel()
-        operation = SyncOperation.DOWNLOAD_CLIPBOARD
+        operation = OP_DOWNLOAD_CLIPBOARD
         isSuccess = false
         isError = false
         isExpanded = false
@@ -954,7 +954,7 @@ class FloatingOverlayService : LifecycleService() {
         val status = statusView ?: return
         val content = contentView ?: return
 
-        val isDownload = operation == SyncOperation.DOWNLOAD_CLIPBOARD
+        val isDownload = operation == OP_DOWNLOAD_CLIPBOARD
         
         val backgroundColor = when {
             isSuccess -> ContextCompat.getColor(this, R.color.state_success)
@@ -999,7 +999,7 @@ class FloatingOverlayService : LifecycleService() {
         val conflictVisible = conflictActionsView?.visibility == View.VISIBLE
         if (!conflictVisible) {
             val shouldShowOpen =
-                isSuccess && operation == SyncOperation.DOWNLOAD_CLIPBOARD && lastDownloadedFileUri != null
+                isSuccess && operation == OP_DOWNLOAD_CLIPBOARD && lastDownloadedFileUri != null
             resultActionsView?.visibility = if (shouldShowOpen) View.VISIBLE else View.GONE
         }
 
@@ -1149,6 +1149,10 @@ class FloatingOverlayService : LifecycleService() {
         const val EXTRA_TEXT = "extra_text"
         const val EXTRA_FILE_URI = "file_uri"
         const val EXTRA_FILE_NAME = "file_name"
+
+        private const val OP_UPLOAD_CLIPBOARD = "upload_clipboard"
+        private const val OP_DOWNLOAD_CLIPBOARD = "download_clipboard"
+        private const val OP_UPLOAD_FILE = "upload_file"
     }
 }
 

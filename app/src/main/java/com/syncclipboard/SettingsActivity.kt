@@ -92,15 +92,6 @@ private fun SettingsScreen() {
         floatingWindowStyle = UiStyleStorage.loadFloatingWindowStyle(context)
     }
 
-    fun openOverlayPermissionSettings() {
-        val intent = android.content.Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${context.packageName}")
-        )
-        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -208,7 +199,7 @@ private fun SettingsScreen() {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            if (!Settings.canDrawOverlays(context)) {
+            if (!PermissionUtils.checkOverlayPermission(context)) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
                     onClick = {
@@ -217,7 +208,7 @@ private fun SettingsScreen() {
                                 message = context.getString(R.string.settings_overlay_permission_required)
                             )
                         }
-                        openOverlayPermissionSettings()
+                        PermissionUtils.requestOverlayPermission(context, showToast = false)
                     }
                 ) {
                     Text(text = "授予悬浮窗权限")

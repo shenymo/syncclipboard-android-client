@@ -37,18 +37,8 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     private fun handleSendText() {
         val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(
-                this,
-                getString(R.string.settings_overlay_permission_required),
-                Toast.LENGTH_SHORT
-            ).show()
-            startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+        if (!PermissionUtils.checkOverlayPermission(this)) {
+            PermissionUtils.requestOverlayPermission(this)
             return
         }
 
@@ -63,18 +53,8 @@ class ShareReceiveActivity : AppCompatActivity() {
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: return
         val fileName = resolveFileName(uri) ?: uri.lastPathSegment ?: "shared_file"
 
-        if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(
-                this,
-                getString(R.string.settings_overlay_permission_required),
-                Toast.LENGTH_SHORT
-            ).show()
-            startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+        if (!PermissionUtils.checkOverlayPermission(this)) {
+            PermissionUtils.requestOverlayPermission(this)
             return
         }
 

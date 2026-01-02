@@ -86,20 +86,6 @@ object FileTransferUtils {
         return String.format("%.1f MB", mb)
     }
 
-    fun buildFileDownloadProgressText(downloadedBytes: Long, totalBytes: Long, speedBytesPerSec: Long): String {
-        val downloaded = formatSize(downloadedBytes)
-        val total = if (totalBytes > 0) formatSize(totalBytes) else "未知大小"
-        val speed = formatSize(speedBytesPerSec) + "/s"
-        return "正在下载文件… $downloaded / $total ($speed)"
-    }
-
-    fun buildFileUploadProgressText(uploadedBytes: Long, totalBytes: Long, speedBytesPerSec: Long): String {
-        val uploaded = formatSize(uploadedBytes)
-        val total = if (totalBytes > 0) formatSize(totalBytes) else "未知大小"
-        val speed = formatSize(speedBytesPerSec) + "/s"
-        return "正在上传文件… $uploaded / $total ($speed)"
-    }
-
     fun buildFileDownloadProgressCollapsedText(downloadedBytes: Long, totalBytes: Long, speedBytesPerSec: Long): String {
         val percent =
             if (totalBytes > 0) String.format(Locale.ROOT, "%.0f%%", downloadedBytes * 100.0 / totalBytes) else "—"
