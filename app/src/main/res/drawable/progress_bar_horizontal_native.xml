@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Track (背景) -->
+    <item android:id="@android:id/background">
+        <shape>
+            <corners android:radius="2dp" />
+            <solid android:color="@color/native_progress_track" />
+        </shape>
+    </item>
+    
+    <!-- Progress (进度) -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <corners android:radius="2dp" />
+                <solid android:color="@color/overlay_progress_fill" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

@@ -73,6 +73,8 @@ class FloatingOverlayService : LifecycleService() {
     private var resultActionsView: View? = null
     private var btnOpen: Button? = null
     private var progressBar: android.widget.ProgressBar? = null
+    
+    private var currentLayoutId: Int = 0
 
     private var statusCompactText: String = ""
     private var statusExpandedText: String = ""
@@ -633,7 +635,15 @@ class FloatingOverlayService : LifecycleService() {
             y = defaultOverlayY()
         }
 
-        val root = LayoutInflater.from(this).inflate(R.layout.view_floating_overlay, null, false)
+        val useNative = shouldUseNativeStyle()
+        val layoutId = if (useNative) {
+            R.layout.view_floating_overlay_native
+        } else {
+            R.layout.view_floating_overlay
+        }
+        currentLayoutId = layoutId
+        
+        val root = LayoutInflater.from(this).inflate(layoutId, null, false)
         val card = root.findViewById<View>(R.id.floating_overlay_card)
         val blurBg = root.findViewById<View>(R.id.floating_overlay_blur_bg)
         val textContainer = root.findViewById<View>(R.id.floating_overlay_text_container)
@@ -1059,6 +1069,55 @@ class FloatingOverlayService : LifecycleService() {
 
         blurBg.layoutParams = FrameLayout.LayoutParams(width, height)
         blurBg.requestLayout()
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val style = UiStyleStorage.loadFloatingWindowStyle(this)
+        if (style == UiStyleStorage.STYLE_AUTO && overlayView != null) {
+            val nightMode = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val isNight = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            
+            // Night -> Glass, Day -> Native
+            val targetLayoutId = if (isNight) R.layout.view_floating_overlay else R.layout.view_floating_overlay_native
+            
+            if (currentLayoutId != targetLayoutId) {
+                reloadOverlay()
+            }
+        }
+    }
+
+    private fun reloadOverlay() {
+        val oldParams = params
+        val x = oldParams?.x ?: 0
+        val y = oldParams?.y ?: defaultOverlayY()
+
+        hideOverlay()
+        showOverlay()
+
+        val newParams = params
+        val newView = overlayView
+        if (newParams != null && newView != null) {
+            newParams.x = x
+            newParams.y = y
+            runCatching { windowManager.updateViewLayout(newView, newParams) }
+        }
+        
+        // Restore content state
+        updateOverlayViews()
+    }
+
+    private fun shouldUseNativeStyle(): Boolean {
+        val style = UiStyleStorage.loadFloatingWindowStyle(this)
+        return when (style) {
+            UiStyleStorage.STYLE_NATIVE -> true
+            UiStyleStorage.STYLE_GLASS -> false
+            UiStyleStorage.STYLE_AUTO -> {
+                val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                nightModeFlags != android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+            else -> false
+        }
     }
 
     private fun applyIconState(

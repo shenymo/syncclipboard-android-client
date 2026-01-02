@@ -10,6 +10,21 @@ object UiStyleStorage {
     private const val PREF_NAME = "ui_style_prefs"
     private const val KEY_LONG_PRESS_CLOSE_SECONDS = "long_press_close_seconds"
     private const val KEY_AUTO_CLOSE_DELAY_SECONDS = "auto_close_delay_seconds"
+    private const val KEY_FLOATING_WINDOW_STYLE = "floating_window_style"
+
+    const val STYLE_GLASS = 0
+    const val STYLE_NATIVE = 1
+    const val STYLE_AUTO = 2
+
+    fun saveFloatingWindowStyle(context: Context, style: Int) {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_FLOATING_WINDOW_STYLE, style).apply()
+    }
+
+    fun loadFloatingWindowStyle(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_FLOATING_WINDOW_STYLE, STYLE_GLASS)
+    }
 
     fun saveLongPressCloseSeconds(context: Context, seconds: Float) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

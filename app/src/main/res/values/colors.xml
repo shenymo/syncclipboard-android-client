@@ -10,6 +10,12 @@
     <color name="overlay_progress_track">#33FFFFFF</color>
     <color name="overlay_progress_fill">#03DAC5</color>
 
+    <!-- Native Style Colors -->
+    <color name="native_background">#FAFAFA</color>
+    <color name="native_text_primary">#212121</color>
+    <color name="native_text_secondary">#757575</color>
+    <color name="native_progress_track">#1F000000</color>
+
     <!-- State Colors -->
     <color name="state_upload">#009688</color> <!-- Teal 500 -->
     <color name="state_download">#2196F3</color> <!-- Blue 500 -->

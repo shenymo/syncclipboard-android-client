@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,6 +75,7 @@ private fun SettingsScreen() {
 
     var longPressCloseSeconds by rememberSaveable { mutableFloatStateOf(2.0f) }
     var autoCloseDelaySeconds by rememberSaveable { mutableFloatStateOf(3.0f) }
+    var floatingWindowStyle by rememberSaveable { mutableIntStateOf(UiStyleStorage.STYLE_GLASS) }
 
     var isTesting by remember { mutableStateOf(false) }
 
@@ -86,6 +89,7 @@ private fun SettingsScreen() {
         }
         longPressCloseSeconds = UiStyleStorage.loadLongPressCloseSeconds(context)
         autoCloseDelaySeconds = UiStyleStorage.loadAutoCloseDelaySeconds(context)
+        floatingWindowStyle = UiStyleStorage.loadFloatingWindowStyle(context)
     }
 
     fun openOverlayPermissionSettings() {
@@ -162,6 +166,48 @@ private fun SettingsScreen() {
                 text = stringResource(id = R.string.settings_ui_style_floating_window),
                 style = MaterialTheme.typography.bodyMedium
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = floatingWindowStyle == UiStyleStorage.STYLE_AUTO,
+                    onClick = {
+                        floatingWindowStyle = UiStyleStorage.STYLE_AUTO
+                        UiStyleStorage.saveFloatingWindowStyle(context, UiStyleStorage.STYLE_AUTO)
+                    }
+                )
+                Text(
+                    text = "自动 (跟随系统)",
+                    modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = floatingWindowStyle == UiStyleStorage.STYLE_GLASS,
+                    onClick = {
+                        floatingWindowStyle = UiStyleStorage.STYLE_GLASS
+                        UiStyleStorage.saveFloatingWindowStyle(context, UiStyleStorage.STYLE_GLASS)
+                    }
+                )
+                Text(
+                    text = "玻璃拟态 (Glass)",
+                    modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = floatingWindowStyle == UiStyleStorage.STYLE_NATIVE,
+                    onClick = {
+                        floatingWindowStyle = UiStyleStorage.STYLE_NATIVE
+                        UiStyleStorage.saveFloatingWindowStyle(context, UiStyleStorage.STYLE_NATIVE)
+                    }
+                )
+                Text(
+                    text = "安卓原生 (Native)",
+                    modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             if (!Settings.canDrawOverlays(context)) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
