@@ -12,19 +12,28 @@ import java.util.Locale
 
 object FileTransferUtils {
 
+    private const val APP_DOWNLOAD_SUBDIR_NAME = "SyncClipboard"
+    private const val RELATIVE_APP_DOWNLOADS_DIR = "Download/$APP_DOWNLOAD_SUBDIR_NAME"
+    private const val RELATIVE_APP_DOWNLOADS_DIR_SLASH = "Download/$APP_DOWNLOAD_SUBDIR_NAME/"
+
     fun getPublicDownloadsPath(): String {
-        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+        return java.io.File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            APP_DOWNLOAD_SUBDIR_NAME
+        ).absolutePath
     }
 
     fun findExistingDownloadEntry(resolver: ContentResolver, fileName: String): Uri? {
         val projection = arrayOf(
             MediaStore.Downloads._ID
         )
-        // 简化查询条件，只匹配文件名。
-        // 在 Android 11+ 上，MediaStore 会自动过滤应用不可见的文件，
-        // 只要能查到结果，通常就是我们有权覆盖或处理的文件。
-        val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
-        val selectionArgs = arrayOf(fileName)
+        // 只在 Download/SyncClipboard/ 子目录下查重，避免与系统/其他应用下载的同名文件互相影响。
+        val selection =
+            "${MediaStore.Downloads.DISPLAY_NAME} = ? AND " +
+                "(${MediaStore.Downloads.RELATIVE_PATH} = ? OR ${MediaStore.Downloads.RELATIVE_PATH} = ?)"
+        val selectionArgs = arrayOf(
+            fileName, RELATIVE_APP_DOWNLOADS_DIR, RELATIVE_APP_DOWNLOADS_DIR_SLASH
+        )
 
         resolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
@@ -75,7 +84,7 @@ object FileTransferUtils {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, fileName)
             put(MediaStore.Downloads.MIME_TYPE, mimeType)
-            put(MediaStore.Downloads.RELATIVE_PATH, "Download")
+            put(MediaStore.Downloads.RELATIVE_PATH, RELATIVE_APP_DOWNLOADS_DIR_SLASH)
         }
         return resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
     }
