@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
@@ -1143,9 +1143,9 @@ class FloatingOverlayService : LifecycleService() {
     }
 
     companion object {
-        const val ACTION_UPLOAD_TEXT = "com.example.syncclipboard.action.UPLOAD_TEXT"
-        const val ACTION_UPLOAD_FILE = "com.example.syncclipboard.action.UPLOAD_FILE"
-        const val ACTION_DOWNLOAD_CLIPBOARD = "com.example.syncclipboard.action.DOWNLOAD_CLIPBOARD"
+        const val ACTION_UPLOAD_TEXT = "com.syncclipboard.action.UPLOAD_TEXT"
+        const val ACTION_UPLOAD_FILE = "com.syncclipboard.action.UPLOAD_FILE"
+        const val ACTION_DOWNLOAD_CLIPBOARD = "com.syncclipboard.action.DOWNLOAD_CLIPBOARD"
         const val EXTRA_TEXT = "extra_text"
         const val EXTRA_FILE_URI = "file_uri"
         const val EXTRA_FILE_NAME = "file_name"

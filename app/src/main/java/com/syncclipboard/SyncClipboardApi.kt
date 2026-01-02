@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 import android.util.Base64
 import org.json.JSONObject

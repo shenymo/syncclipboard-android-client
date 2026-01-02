@@ -1,4 +1,4 @@
-package com.example.syncclipboard.ui.theme
+package com.syncclipboard.ui.theme
 
 import android.os.Build
 import androidx.compose.material3.MaterialTheme

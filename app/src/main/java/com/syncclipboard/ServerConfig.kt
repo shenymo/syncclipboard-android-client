@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 /**
  * 服务器配置：

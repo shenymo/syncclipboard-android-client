@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 import android.app.PendingIntent
 import android.content.Intent

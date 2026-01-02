@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 /**
  * 悬浮窗进度展示所需的操作类型标识。

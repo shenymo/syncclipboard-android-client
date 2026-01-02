@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 import android.net.Uri
 import android.os.Bundle
@@ -46,7 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.syncclipboard.ui.theme.SyncClipboardTheme
+import com.syncclipboard.ui.theme.SyncClipboardTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

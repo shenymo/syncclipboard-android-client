@@ -1,4 +1,4 @@
-package com.example.syncclipboard
+package com.syncclipboard
 
 import android.content.ClipboardManager
 import android.content.Context
