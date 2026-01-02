@@ -3,5 +3,11 @@
     <color name="purple_500">#6200EE</color>
     <color name="purple_700">#3700B3</color>
     <color name="teal_200">#03DAC5</color>
+
+    <!-- Overlay Colors -->
+    <color name="overlay_background">#CC1E1E1E</color> <!-- 深色半透明底 -->
+    <color name="overlay_stroke">#33FFFFFF</color>     <!-- 淡淡的白边 -->
+    <color name="overlay_progress_track">#33FFFFFF</color>
+    <color name="overlay_progress_fill">#03DAC5</color>
 </resources>
 

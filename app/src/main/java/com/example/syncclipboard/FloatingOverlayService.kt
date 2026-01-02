@@ -50,8 +50,12 @@ import kotlin.math.abs
 class FloatingOverlayService : LifecycleService() {
 
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
+    private val vibrator by lazy { getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator }
     private val mainHandler = Handler(Looper.getMainLooper())
     private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+    
+    private var isClosing = false
+    private var iconAnimator: android.animation.ObjectAnimator? = null
 
     private var overlayView: View? = null
     private var params: WindowManager.LayoutParams? = null
@@ -67,10 +71,12 @@ class FloatingOverlayService : LifecycleService() {
     private var btnRenameSave: Button? = null
     private var resultActionsView: View? = null
     private var btnOpen: Button? = null
+    private var progressBar: android.widget.ProgressBar? = null
 
     private var statusCompactText: String = ""
     private var statusExpandedText: String = ""
     private var contentRawText: String? = null
+    private var progressValue: Int = -1 // -1 means indeterminate or hidden
     private var isSuccess: Boolean = false
     private var isError: Boolean = false
     private var operation: String = ""
@@ -92,6 +98,7 @@ class FloatingOverlayService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (isClosing) return START_NOT_STICKY
         when (intent?.action) {
             ACTION_UPLOAD_TEXT -> startUploadText(intent.getStringExtra(EXTRA_TEXT).orEmpty())
             ACTION_UPLOAD_FILE -> {
@@ -100,7 +107,7 @@ class FloatingOverlayService : LifecycleService() {
                 startUploadFile(uriString = uriString, fileName = fileName)
             }
             ACTION_DOWNLOAD_CLIPBOARD -> startDownloadClipboard()
-            else -> stopSelf()
+            else -> animateAndStopSelf()
         }
         return START_NOT_STICKY
     }
@@ -109,6 +116,34 @@ class FloatingOverlayService : LifecycleService() {
         hideOverlay()
         super.onDestroy()
     }
+    
+    private fun animateAndStopSelf() {
+        if (isClosing) return
+        isClosing = true
+        
+        val card = overlayCardView ?: run {
+            stopSelf()
+            return
+        }
+        
+        card.animate()
+            .scaleX(0f)
+            .scaleY(0f)
+            .alpha(0f)
+            .setDuration(250)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction { stopSelf() }
+            .start()
+    }
+    
+    private fun vibrateShort() {
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            vibrator.vibrate(android.os.VibrationEffect.createOneShot(50, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(50)
+        }
+    }
 
     private fun previewForOverlay(raw: String, maxChars: Int = 80): String {
         val normalized = raw.trim().replace("\r", " ").replace("\n", " ")
@@ -116,9 +151,10 @@ class FloatingOverlayService : LifecycleService() {
         return if (normalized.length > maxChars) normalized.take(maxChars) + "…" else normalized
     }
 
-    private fun setStatus(compact: String, expanded: String = compact) {
+    private fun setStatus(compact: String, expanded: String = compact, progress: Int = -1) {
         statusCompactText = compact
         statusExpandedText = expanded
+        progressValue = progress
         updateOverlayViews()
     }
 
@@ -130,6 +166,9 @@ class FloatingOverlayService : LifecycleService() {
     private fun setState(success: Boolean, error: Boolean) {
         isSuccess = success
         isError = error
+        if (success || error) {
+            progressValue = -1
+        }
         updateOverlayViews()
     }
 
@@ -297,7 +336,8 @@ class FloatingOverlayService : LifecycleService() {
                             speedBytesPerSec = speedBytesPerSec,
                             elapsedSec = elapsedSec
                         )
-                        setStatus(compact = compact, expanded = expanded)
+                        val progress = if (total > 0) ((uploaded.toDouble() / total) * 100).toInt().coerceIn(0, 100) else -1
+                        setStatus(compact = compact, expanded = expanded, progress = progress)
                     }
                 }
 
@@ -465,7 +505,8 @@ class FloatingOverlayService : LifecycleService() {
                         speedBytesPerSec = speedBytesPerSec,
                         elapsedSec = elapsedSec
                     )
-                    setStatus(compact = compact, expanded = expanded)
+                    val progress = if (total > 0) ((downloaded.toDouble() / total) * 100).toInt().coerceIn(0, 100) else -1
+                    setStatus(compact = compact, expanded = expanded, progress = progress)
                     setContent(finalFileName)
                 }
             }
@@ -569,7 +610,7 @@ class FloatingOverlayService : LifecycleService() {
         if (delaySeconds <= 0f) return
         lifecycleScope.launch {
             delay((delaySeconds * 1000).toLong())
-            stopSelf()
+            animateAndStopSelf()
         }
     }
 
@@ -603,6 +644,7 @@ class FloatingOverlayService : LifecycleService() {
         val renameSaveButton = root.findViewById<Button>(R.id.floating_overlay_btn_rename_save)
         val resultActions = root.findViewById<View>(R.id.floating_overlay_result_actions)
         val openButton = root.findViewById<Button>(R.id.floating_overlay_btn_open)
+        val progress = root.findViewById<android.widget.ProgressBar>(R.id.floating_overlay_progress)
 
         root.setOnTouchListener { _, event -> handleTouch(event) }
 
@@ -624,16 +666,50 @@ class FloatingOverlayService : LifecycleService() {
             resultActionsView = resultActions
             btnOpen = openButton
             resultActions.visibility = View.GONE
+            progressBar = progress
             hasUserMovedOverlay = false
 
             replaceButton.setOnClickListener { pendingConflictDecision.set(FileConflictDecision.REPLACE) }
             renameSaveButton.setOnClickListener { pendingConflictDecision.set(FileConflictDecision.RENAME_SAVE) }
             openButton.setOnClickListener { openDownloadedFile() }
 
+            // 监听布局变化，自动更新窗口大小
+            // 当内容大小改变（例如展开/收起）导致 View 重新布局时，此回调触发
+            root.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                val newWidth = right - left
+                val newHeight = bottom - top
+                val oldWidth = oldRight - oldLeft
+                val oldHeight = oldBottom - oldTop
+
+                if (newWidth != oldWidth || newHeight != oldHeight) {
+                    val currentParams = params
+                    if (currentParams != null) {
+                        // 保持窗口为 WRAP_CONTENT，避免首次布局后被“锁定”为固定宽高，导致后续展开/收起无法改变大小。
+                        currentParams.width = WindowManager.LayoutParams.WRAP_CONTENT
+                        currentParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+                        runCatching { windowManager.updateViewLayout(v, currentParams) }
+                        // 大小变了，模糊背景也要跟着变
+                        overlayCardView?.post { resizeBlurBackgroundToOverlay() }
+                    }
+                }
+            }
+
             applyExpandedState()
             root.post {
                 resizeBlurBackgroundToOverlay()
                 applyGlassBlurIfSupported()
+                
+                // Entrance Animation
+                card.alpha = 0f
+                card.scaleX = 0.9f
+                card.scaleY = 0.9f
+                card.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(300)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
             }
         } catch (_: Exception) {
             stopSelf()
@@ -657,6 +733,7 @@ class FloatingOverlayService : LifecycleService() {
         val status = statusView ?: return
         val content = contentView ?: return
         val container = textContainerView
+        val blurBg = blurBackgroundView
 
         if (isExpanded) {
             applyTextBehaviorExpanded(status, maxLines = 6)
@@ -670,12 +747,21 @@ class FloatingOverlayService : LifecycleService() {
             container?.let { view ->
                 view.layoutParams = view.layoutParams.apply { width = dpToPx(240) }
             }
+            // blurBg 的尺寸会参与 overlayCard(FrameLayout, wrap_content) 的测量。
+            // 展开后 blurBg 被设置成较大的固定像素值，如果收起时不先清掉它，card 会被 blurBg “撑住”导致外框无法缩回。
+            blurBg?.layoutParams = FrameLayout.LayoutParams(0, 0)
+            blurBg?.requestLayout()
         }
 
         container?.requestLayout()
         overlayCardView?.requestLayout()
         overlayView?.requestLayout()
         requestOverlayWindowResize()
+
+        // Re-request resize after transition animation (default ~300ms)
+        if (!isExpanded) {
+            mainHandler.postDelayed({ requestOverlayWindowResize() }, 350)
+        }
     }
 
     private fun requestOverlayWindowResize() {
@@ -683,10 +769,24 @@ class FloatingOverlayService : LifecycleService() {
             mainHandler.post { requestOverlayWindowResize() }
             return
         }
-        val root = overlayView ?: return
+        val current = overlayView ?: return
         val currentParams = params ?: return
-        runCatching { windowManager.updateViewLayout(root, currentParams) }
-        overlayCardView?.post { resizeBlurBackgroundToOverlay() }
+
+        // 触发 View 树重新布局。
+        // 如果大小发生变化，addOnLayoutChangeListener 会被调用，并在那里更新 Window。
+        textContainerView?.requestLayout()
+        current.requestLayout()
+
+        // 关键点：收起/展开会先改变子 View 的 layoutParams 与文本内容。
+        // 若在它们真正完成 layout 之前就 updateViewLayout，Window 可能仍按“旧尺寸”布局，从而看起来无法缩回。
+        // 因此这里把 updateViewLayout 推迟到下一帧（layout 之后），确保窗口按新内容重新测量。
+        current.post {
+            val latest = overlayView ?: return@post
+            val latestParams = params ?: return@post
+            latestParams.width = WindowManager.LayoutParams.WRAP_CONTENT
+            latestParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+            runCatching { windowManager.updateViewLayout(latest, latestParams) }
+        }
     }
 
     private fun applyTextBehaviorCollapsed(view: TextView) {
@@ -711,6 +811,8 @@ class FloatingOverlayService : LifecycleService() {
 
     private fun handleTouch(event: MotionEvent): Boolean {
         val currentParams = params ?: return false
+        val card = overlayCardView ?: return false
+
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 if (isTouchOnActionButton(event)) return false
@@ -720,10 +822,16 @@ class FloatingOverlayService : LifecycleService() {
                 startX = currentParams.x
                 startY = currentParams.y
 
+                // Touch Down Feedback
+                card.animate().scaleX(0.92f).scaleY(0.92f).setDuration(100).start()
+
                 val longPressSeconds = UiStyleStorage.loadLongPressCloseSeconds(this)
                 if (longPressSeconds > 0f) {
                     longPressRunnable?.let { mainHandler.removeCallbacks(it) }
-                    longPressRunnable = Runnable { stopSelf() }.also {
+                    longPressRunnable = Runnable {
+                        vibrateShort()
+                        animateAndStopSelf()
+                    }.also {
                         mainHandler.postDelayed(it, (longPressSeconds * 1000).toLong())
                     }
                 }
@@ -735,6 +843,8 @@ class FloatingOverlayService : LifecycleService() {
                 if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                     dragging = true
                     longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+                    // Restore scale if dragging starts
+                    card.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
                 }
                 if (dragging) {
                     hasUserMovedOverlay = true
@@ -749,6 +859,15 @@ class FloatingOverlayService : LifecycleService() {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                 longPressRunnable = null
+                
+                // Touch Up Feedback
+                card.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(300)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(1.5f))
+                    .start()
+
                 val wasDragging = dragging
                 dragging = false
                 if (event.actionMasked == MotionEvent.ACTION_UP && !wasDragging) {
@@ -809,6 +928,23 @@ class FloatingOverlayService : LifecycleService() {
             activeColor = accentColor,
             inactiveColor = inactiveColor
         )
+        
+        // Icon Animation
+        val activeIcon = if (isDownload) iconDownload else iconUpload
+        if (!isSuccess && !isError) {
+             if (iconAnimator == null) {
+                 iconAnimator = android.animation.ObjectAnimator.ofFloat(activeIcon, "translationY", 0f, -4f, 0f).apply {
+                     duration = 1000
+                     repeatCount = android.animation.ObjectAnimator.INFINITE
+                     repeatMode = android.animation.ObjectAnimator.REVERSE
+                     start()
+                 }
+             }
+        } else {
+            iconAnimator?.cancel()
+            iconAnimator = null
+            activeIcon.translationY = 0f
+        }
 
         status.text = (if (isExpanded) statusExpandedText else statusCompactText).ifBlank { "准备中…" }
         val raw = contentRawText?.takeIf { it.isNotBlank() }
@@ -823,6 +959,14 @@ class FloatingOverlayService : LifecycleService() {
             val shouldShowOpen =
                 isSuccess && operation == SyncOperation.DOWNLOAD_CLIPBOARD && lastDownloadedFileUri != null
             resultActionsView?.visibility = if (shouldShowOpen) View.VISIBLE else View.GONE
+        }
+
+        val progress = progressBar ?: return
+        if (progressValue >= 0 && !isSuccess && !isError) {
+            progress.visibility = View.VISIBLE
+            progress.progress = progressValue
+        } else {
+            progress.visibility = View.GONE
         }
     }
 
@@ -842,6 +986,9 @@ class FloatingOverlayService : LifecycleService() {
         btnRenameSave = null
         resultActionsView = null
         btnOpen = null
+        progressBar = null
+        iconAnimator?.cancel()
+        iconAnimator = null
         longPressRunnable?.let { mainHandler.removeCallbacks(it) }
         longPressRunnable = null
         try {
