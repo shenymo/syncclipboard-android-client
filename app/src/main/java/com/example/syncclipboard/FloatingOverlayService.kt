@@ -60,8 +60,9 @@ class FloatingOverlayService : LifecycleService() {
     private var overlayView: View? = null
     private var params: WindowManager.LayoutParams? = null
     private var overlayCardView: View? = null
-    private var textContainerView: View? = null
     private var blurBackgroundView: View? = null
+    private var textContainerView: View? = null
+    private var iconContainerView: View? = null
     private var iconUploadView: ImageView? = null
     private var iconDownloadView: ImageView? = null
     private var statusView: TextView? = null
@@ -88,6 +89,7 @@ class FloatingOverlayService : LifecycleService() {
     private var lastDownloadedFileName: String? = null
 
     private var longPressRunnable: Runnable? = null
+    private var longPressVibrateRunnable: Runnable? = null
     private var downX = 0f
     private var downY = 0f
     private var startX = 0
@@ -635,6 +637,7 @@ class FloatingOverlayService : LifecycleService() {
         val card = root.findViewById<View>(R.id.floating_overlay_card)
         val blurBg = root.findViewById<View>(R.id.floating_overlay_blur_bg)
         val textContainer = root.findViewById<View>(R.id.floating_overlay_text_container)
+        val iconContainer = root.findViewById<View>(R.id.floating_overlay_icon_container)
         val iconUpload = root.findViewById<ImageView>(R.id.floating_overlay_icon_upload)
         val iconDownload = root.findViewById<ImageView>(R.id.floating_overlay_icon_download)
         val status = root.findViewById<TextView>(R.id.floating_overlay_status)
@@ -655,6 +658,7 @@ class FloatingOverlayService : LifecycleService() {
             overlayCardView = card
             blurBackgroundView = blurBg
             textContainerView = textContainer
+            iconContainerView = iconContainer
             iconUploadView = iconUpload
             iconDownloadView = iconDownload
             statusView = status
@@ -822,18 +826,38 @@ class FloatingOverlayService : LifecycleService() {
                 startX = currentParams.x
                 startY = currentParams.y
 
-                // Touch Down Feedback
-                card.animate().scaleX(0.92f).scaleY(0.92f).setDuration(100).start()
-
                 val longPressSeconds = UiStyleStorage.loadLongPressCloseSeconds(this)
                 if (longPressSeconds > 0f) {
+                    val totalMillis = (longPressSeconds * 1000).toLong()
+                    val shrinkMillis = (totalMillis * 0.8).toLong()
+                    
+                    // Phase 1: Shrink to 50% over 80% of the time
+                    card.animate()
+                        .scaleX(0.5f)
+                        .scaleY(0.5f)
+                        .setDuration(shrinkMillis)
+                        .setInterpolator(android.view.animation.LinearInterpolator())
+                        .start()
+
+                    // Schedule Vibrate at 80%
+                    longPressVibrateRunnable?.let { mainHandler.removeCallbacks(it) }
+                    longPressVibrateRunnable = Runnable {
+                        vibrateShort()
+                        // Phase 2: Wait (View stays at 0.5f automatically after animation ends)
+                    }.also {
+                        mainHandler.postDelayed(it, shrinkMillis)
+                    }
+
+                    // Schedule Close at 100%
                     longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                     longPressRunnable = Runnable {
-                        vibrateShort()
                         animateAndStopSelf()
                     }.also {
-                        mainHandler.postDelayed(it, (longPressSeconds * 1000).toLong())
+                        mainHandler.postDelayed(it, totalMillis)
                     }
+                } else {
+                    // Default Touch Down Feedback
+                    card.animate().scaleX(0.92f).scaleY(0.92f).setDuration(100).start()
                 }
                 return true
             }
@@ -842,6 +866,8 @@ class FloatingOverlayService : LifecycleService() {
                 val dy = event.rawY - downY
                 if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                     dragging = true
+                    // Cancel long press logic
+                    longPressVibrateRunnable?.let { mainHandler.removeCallbacks(it) }
                     longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                     // Restore scale if dragging starts
                     card.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
@@ -857,6 +883,9 @@ class FloatingOverlayService : LifecycleService() {
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                // Cancel long press logic
+                longPressVibrateRunnable?.let { mainHandler.removeCallbacks(it) }
+                longPressVibrateRunnable = null
                 longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                 longPressRunnable = null
                 
@@ -909,24 +938,27 @@ class FloatingOverlayService : LifecycleService() {
             return
         }
 
+        val iconContainer = iconContainerView ?: return
         val iconUpload = iconUploadView ?: return
         val iconDownload = iconDownloadView ?: return
         val status = statusView ?: return
         val content = contentView ?: return
 
-        val accentColor = when {
-            isSuccess -> ContextCompat.getColor(this, android.R.color.holo_green_dark)
-            isError -> ContextCompat.getColor(this, android.R.color.holo_red_dark)
-            else -> ContextCompat.getColor(this, android.R.color.white)
-        }
-        val inactiveColor = ContextCompat.getColor(this, android.R.color.darker_gray)
         val isDownload = operation == SyncOperation.DOWNLOAD_CLIPBOARD
+        
+        val backgroundColor = when {
+            isSuccess -> ContextCompat.getColor(this, R.color.state_success)
+            isError -> ContextCompat.getColor(this, R.color.state_error)
+            isDownload -> ContextCompat.getColor(this, R.color.state_download)
+            else -> ContextCompat.getColor(this, R.color.state_upload)
+        }
+
         applyIconState(
+            container = iconContainer,
             uploadView = iconUpload,
             downloadView = iconDownload,
             isDownloadOperation = isDownload,
-            activeColor = accentColor,
-            inactiveColor = inactiveColor
+            backgroundColor = backgroundColor
         )
         
         // Icon Animation
@@ -977,6 +1009,7 @@ class FloatingOverlayService : LifecycleService() {
         overlayCardView = null
         blurBackgroundView = null
         textContainerView = null
+        iconContainerView = null
         iconUploadView = null
         iconDownloadView = null
         statusView = null
@@ -1029,20 +1062,25 @@ class FloatingOverlayService : LifecycleService() {
     }
 
     private fun applyIconState(
+        container: View,
         uploadView: ImageView,
         downloadView: ImageView,
         isDownloadOperation: Boolean,
-        @ColorInt activeColor: Int,
-        @ColorInt inactiveColor: Int
+        @ColorInt backgroundColor: Int
     ) {
         val activeView = if (isDownloadOperation) downloadView else uploadView
         val inactiveView = if (isDownloadOperation) uploadView else downloadView
 
-        activeView.imageTintList = ColorStateList.valueOf(activeColor)
+        // Show active icon, hide inactive
+        activeView.visibility = View.VISIBLE
         activeView.alpha = 1.0f
+        inactiveView.visibility = View.GONE
 
-        inactiveView.imageTintList = ColorStateList.valueOf(inactiveColor)
-        inactiveView.alpha = 0.6f
+        // Tint the background circle
+        container.background?.setTint(backgroundColor)
+        
+        // Ensure icons are white (reset any previous tints if recycled)
+        activeView.imageTintList = null 
     }
 
     companion object {

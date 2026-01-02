@@ -9,5 +9,11 @@
     <color name="overlay_stroke">#33FFFFFF</color>     <!-- 淡淡的白边 -->
     <color name="overlay_progress_track">#33FFFFFF</color>
     <color name="overlay_progress_fill">#03DAC5</color>
+
+    <!-- State Colors -->
+    <color name="state_upload">#009688</color> <!-- Teal 500 -->
+    <color name="state_download">#2196F3</color> <!-- Blue 500 -->
+    <color name="state_success">#4CAF50</color> <!-- Green 500 -->
+    <color name="state_error">#F44336</color> <!-- Red 500 -->
 </resources>
 
